@@ -366,123 +366,49 @@ void MainWindow::on_writeRom_clicked()
 
 void MainWindow::sendData()
 {
-    if(fileSize==0x80000){
-        progress=progress+1;
-        ui->progressBar->setValue(progress/5.12+1);
-         if(address >= 0x80000){
-            const uint8_t controlByte = 0x0F;
-            const uint8_t controlByte1 = 0xAA;
-            const uint8_t controlByte2 = 0x55;
-            const uint8_t controlByte3 = 0xBB;
-            QByteArray packet;
-            packet.append(controlByte);
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte2); // 24-bit address high byte
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte3);  // 24-bit address middle byte
-            COM->write(packet);
-            file.close();
-            ui->infoDisplay->append("Game burning completed\r\n");
-            return;
-            }
-        }
-    else if(fileSize==0x100000){
-        progress=progress+1;
-        ui->progressBar->setValue(progress/10.24+1);
-        if(address >= 0x100000){
-            const uint8_t controlByte = 0x0F;
-            const uint8_t controlByte1 = 0xAA;
-            const uint8_t controlByte2 = 0x55;
-            const uint8_t controlByte3 = 0xBB;
-            QByteArray packet;
-            packet.append(controlByte);
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte2); // 24-bit address high byte
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte3);  // 24-bit address middle byte
-            COM->write(packet);
-            file.close();
-            ui->infoDisplay->append("Game burning completed\r\n");
-            return;
-            }
-        }
-    else if(fileSize==0x200000){
-        progress=progress+1;
-        ui->progressBar->setValue(progress/20.48+1);
-        if(address >= 0x200000){
-            const uint8_t controlByte = 0x0F;
-            const uint8_t controlByte1 = 0xAA;
-            const uint8_t controlByte2 = 0x55;
-            const uint8_t controlByte3 = 0xBB;
-            QByteArray packet;
-            packet.append(controlByte);
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte2); // 24-bit address high byte
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte3);  // 24-bit address middle byte
-            COM->write(packet);
-            file.close();
-            ui->infoDisplay->append("Game burning completed\r\n");
-            return;
-            }
-        }
-    else if(fileSize==0x300000){
-        progress=progress+1;
-        ui->progressBar->setValue(progress/30.72+1);
-        if(address >= 0x300000){
-            const uint8_t controlByte = 0x0F;
-            const uint8_t controlByte1 = 0xAA;
-            const uint8_t controlByte2 = 0x55;
-            const uint8_t controlByte3 = 0xBB;
-            QByteArray packet;
-            packet.append(controlByte);
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte2); // 24-bit address high byte
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte3);  // 24-bit address middle byte
-            COM->write(packet);
-            file.close();
-            ui->infoDisplay->append("Game burning completed\r\n");
-            return;
-            }
-        }
-    else if(fileSize==0x400000){
-        progress=progress+1;
-        ui->progressBar->setValue(progress/40.96+1);
-        if(address >= 0x400000){
-            const uint8_t controlByte = 0x0F;
-            const uint8_t controlByte1 = 0xAA;
-            const uint8_t controlByte2 = 0x55;
-            const uint8_t controlByte3 = 0xBB;
-            QByteArray packet;
-            packet.append(controlByte);
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte2); // 24-bit address high byte
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte3);  // 24-bit address middle byte
-            COM->write(packet);
-            file.close();
-            ui->infoDisplay->append("Game burning completed\r\n");
-            return;
-            }
-        }
-    else {
+    // Reject ROMs over 4M
+    if (fileSize > 0x400000) {
         ui->progressBar->setValue(0);
-            const uint8_t controlByte = 0x0F;
-            const uint8_t controlByte1 = 0xAA;
-            const uint8_t controlByte2 = 0x55;
-            const uint8_t controlByte3 = 0xBB;
-            QByteArray packet;
-            packet.append(controlByte);
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte2); // 24-bit address high byte
-            packet.append(controlByte1); // 24-bit address high byte
-            packet.append(controlByte3);  // 24-bit address middle byte
-            COM->write(packet);
-            file.close();
-            ui->infoDisplay->append("The file size is not supported by the system\r\n");
-            return;
-        }
+        const uint8_t controlByte = 0x0F;
+        const uint8_t controlByte1 = 0xAA;
+        const uint8_t controlByte2 = 0x55;
+        const uint8_t controlByte3 = 0xBB;
+        QByteArray packet;
+        packet.append(controlByte);
+        packet.append(controlByte1);
+        packet.append(controlByte2);
+        packet.append(controlByte1);
+        packet.append(controlByte3);
+        COM->write(packet);
+        file.close();
+        ui->infoDisplay->append("ROM too large (max 4M)\r\n");
+        return;
+    }
+
+    // Calculate progress dynamically based on file size
+    // Formula: progressDivisor = (fileSize in KB) / 100
+    double progressDivisor = (fileSize / 1024.0) / 100.0;
+    if (progressDivisor < 0.01) progressDivisor = 0.01; // Prevent division issues for tiny files
+    progress = progress + 1;
+    ui->progressBar->setValue(progress / progressDivisor + 1);
+
+    // Check if we've written all data
+    if (address >= fileSize) {
+        const uint8_t controlByte = 0x0F;
+        const uint8_t controlByte1 = 0xAA;
+        const uint8_t controlByte2 = 0x55;
+        const uint8_t controlByte3 = 0xBB;
+        QByteArray packet;
+        packet.append(controlByte);
+        packet.append(controlByte1);
+        packet.append(controlByte2);
+        packet.append(controlByte1);
+        packet.append(controlByte3);
+        COM->write(packet);
+        file.close();
+        ui->infoDisplay->append("Game burning completed\r\n");
+        return;
+    }
     const uint8_t controlByte = 0x0B;
     const uint8_t controlByte1 = 0xAA;
     const uint8_t controlByte2 = 0x55;
@@ -921,7 +847,8 @@ void MainWindow::on_readSave_clicked()
 
 void MainWindow::on_flashsize_currentTextChanged(const QString &text)
 {
-    ui->eraseBySize->setText("Erase First " + text);
+    ui->eraseBySize->setText("Erase " + text + " Cart ROM");
+    ui->readRom->setText("Backup " + text + " Cart ROM");
 }
 
 void MainWindow::on_selectRomButton_clicked()
@@ -936,25 +863,12 @@ void MainWindow::on_selectRomButton_clicked()
     QFileInfo fileInfo(fileName);
     qint64 romSize = fileInfo.size();
 
-    // Determine size label and dropdown index
-    QString sizeLabel;
-    int dropdownIndex = -1;
-    if (romSize == 0x20000) { sizeLabel = "128K"; dropdownIndex = 0; }
-    else if (romSize == 0x40000) { sizeLabel = "256K"; dropdownIndex = 1; }
-    else if (romSize == 0x80000) { sizeLabel = "512K"; dropdownIndex = 2; }
-    else if (romSize == 0x100000) { sizeLabel = "1M"; dropdownIndex = 3; }
-    else if (romSize == 0x200000) { sizeLabel = "2M"; dropdownIndex = 4; }
-    else if (romSize == 0x400000) { sizeLabel = "4M"; dropdownIndex = 5; }
-    else {
-        sizeLabel = QString::number(romSize / 1024) + "K";
-    }
-
-    // Check if size is valid
-    if (dropdownIndex < 0) {
+    // Reject ROMs over 4M
+    if (romSize > 0x400000) {
+        QString sizeLabel = QString::number(romSize / 1024) + "K";
         ui->infoDisplay->clear();
-        ui->infoDisplay->append("Invalid ROM size: " + sizeLabel + "\r\n");
-        ui->infoDisplay->append("Supported sizes: 128K, 256K, 512K, 1M, 2M, 4M\r\n");
-        // Clear previous selection and hide button
+        ui->infoDisplay->append("ROM too large: " + sizeLabel + "\r\n");
+        ui->infoDisplay->append("Maximum supported size is 4M\r\n");
         selectedRomPath.clear();
         selectedRomSize = 0;
         ui->selectedRomInfo->hide();
@@ -962,6 +876,17 @@ void MainWindow::on_selectRomButton_clicked()
         ui->writeRom->setStyleSheet("");
         return;
     }
+
+    // Determine size label and dropdown index (auto-adjust to next valid size)
+    QString sizeLabel;
+    QString actualSizeLabel = QString::number(romSize / 1024) + "K";
+    int dropdownIndex = -1;
+    if (romSize <= 0x20000) { sizeLabel = "128K"; dropdownIndex = 0; }
+    else if (romSize <= 0x40000) { sizeLabel = "256K"; dropdownIndex = 1; }
+    else if (romSize <= 0x80000) { sizeLabel = "512K"; dropdownIndex = 2; }
+    else if (romSize <= 0x100000) { sizeLabel = "1M"; dropdownIndex = 3; }
+    else if (romSize <= 0x200000) { sizeLabel = "2M"; dropdownIndex = 4; }
+    else { sizeLabel = "4M"; dropdownIndex = 5; }
 
     // Auto-update the ROM SIZE dropdown
     ui->flashsize->setCurrentIndex(dropdownIndex);
@@ -971,7 +896,11 @@ void MainWindow::on_selectRomButton_clicked()
     selectedRomSize = romSize;
 
     // Update info label and show it
-    ui->selectedRomInfo->setText("Selected: " + fileInfo.fileName() + " (" + sizeLabel + ")");
+    if (actualSizeLabel != sizeLabel) {
+        ui->selectedRomInfo->setText("Selected: " + fileInfo.fileName() + " (" + actualSizeLabel + " → " + sizeLabel + ")");
+    } else {
+        ui->selectedRomInfo->setText("Selected: " + fileInfo.fileName() + " (" + sizeLabel + ")");
+    }
     ui->selectedRomInfo->show();
 
     // Show the Write ROM button with green highlight
@@ -981,7 +910,11 @@ void MainWindow::on_selectRomButton_clicked()
     // Show success in log
     ui->infoDisplay->clear();
     ui->infoDisplay->append("ROM selected: " + fileInfo.fileName() + "\r\n");
-    ui->infoDisplay->append("Size: " + sizeLabel + "\r\n");
+    if (actualSizeLabel != sizeLabel) {
+        ui->infoDisplay->append("Size: " + actualSizeLabel + " (using " + sizeLabel + " slot)\r\n");
+    } else {
+        ui->infoDisplay->append("Size: " + sizeLabel + "\r\n");
+    }
 }
 
 QString MainWindow::getLastDirectory(const QString &key)
@@ -1013,8 +946,12 @@ void MainWindow::setConnectedUIVisible(bool visible)
     // Elements within device group that show when connected
     ui->separator1->setVisible(visible);
     ui->detectRom->setVisible(visible);
+    ui->flashsize->setVisible(visible);
+    ui->label->setVisible(visible);
     ui->readRom->setVisible(visible);
     ui->readSave->setVisible(visible);
+    ui->eraseBySize->setVisible(visible);
+    ui->eraseFlash->setVisible(visible);
 
     // Group boxes that show when connected
     ui->romGroupBox->setVisible(visible);

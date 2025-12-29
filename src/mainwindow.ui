@@ -136,59 +136,7 @@ background-color: rgb(240, 240, 245);</string>
          </property>
         </widget>
        </item>
-       <!-- Backup Buttons -->
-       <item>
-        <layout class="QHBoxLayout" name="backupLayout">
-         <item>
-          <widget class="QPushButton" name="readRom">
-           <property name="text">
-            <string>Backup Cart ROM</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="readSave">
-           <property name="text">
-            <string>Backup Cart Save</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
-    </item>
-    <!-- Tall spacer (shown when disconnected to push device box up) -->
-    <item>
-     <widget class="QWidget" name="disconnectedSpacer">
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>400</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>400</width>
-        <height>400</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background: transparent;</string>
-      </property>
-     </widget>
-    </item>
-    <!-- ROM Group Box -->
-    <item>
-     <widget class="QGroupBox" name="romGroupBox">
-      <property name="title">
-       <string>ROM:</string>
-      </property>
-      <layout class="QVBoxLayout" name="romLayout">
-       <property name="spacing">
-        <number>8</number>
-       </property>
-       <!-- ROM SIZE Section -->
+       <!-- ROM SIZE Section (for backup operations) -->
        <item>
         <layout class="QHBoxLayout" name="romSizeLayout">
          <item>
@@ -243,6 +191,25 @@ background-color: rgb(240, 240, 245);</string>
          </item>
         </layout>
        </item>
+       <!-- Backup Buttons -->
+       <item>
+        <layout class="QHBoxLayout" name="backupLayout">
+         <item>
+          <widget class="QPushButton" name="readRom">
+           <property name="text">
+            <string>Backup Cart ROM</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="readSave">
+           <property name="text">
+            <string>Backup Cart Save</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
        <!-- Erase Buttons -->
        <item>
         <layout class="QHBoxLayout" name="eraseLayout">
@@ -256,12 +223,45 @@ background-color: rgb(240, 240, 245);</string>
          <item>
           <widget class="QPushButton" name="eraseFlash">
            <property name="text">
-            <string>Erase Entire Cart</string>
+            <string>Erase Entire Cart ROM</string>
            </property>
           </widget>
          </item>
         </layout>
        </item>
+      </layout>
+     </widget>
+    </item>
+    <!-- Tall spacer (shown when disconnected to push device box up) -->
+    <item>
+     <widget class="QWidget" name="disconnectedSpacer">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>400</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>400</width>
+        <height>400</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background: transparent;</string>
+      </property>
+     </widget>
+    </item>
+    <!-- ROM Group Box -->
+    <item>
+     <widget class="QGroupBox" name="romGroupBox">
+      <property name="title">
+       <string>ROM:</string>
+      </property>
+      <layout class="QVBoxLayout" name="romLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
        <!-- Select ROM Button -->
        <item>
         <widget class="QPushButton" name="selectRomButton">
