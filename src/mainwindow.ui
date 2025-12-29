@@ -1,0 +1,387 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>570</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>570</width>
+    <height>900</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>570</width>
+    <height>900</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>md-flasher</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">color: rgb(40, 40, 50);
+selection-color: rgb(255, 255, 255);
+selection-background-color: rgb(70, 130, 180);
+background-color: rgb(240, 240, 245);</string>
+  </property>
+  <property name="locale">
+   <locale language="English" country="UnitedStates"/>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainLayout">
+    <property name="spacing">
+     <number>10</number>
+    </property>
+    <property name="leftMargin">
+     <number>15</number>
+    </property>
+    <property name="topMargin">
+     <number>15</number>
+    </property>
+    <property name="rightMargin">
+     <number>15</number>
+    </property>
+    <property name="bottomMargin">
+     <number>15</number>
+    </property>
+    <!-- Logo -->
+    <item>
+     <widget class="QLabel" name="logoLabel">
+      <property name="pixmap">
+       <pixmap resource="qrc.qrc">:/logo.png</pixmap>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <!-- Device Group Box -->
+    <item>
+     <widget class="QGroupBox" name="deviceGroupBox">
+      <property name="title">
+       <string>Device:</string>
+      </property>
+      <layout class="QVBoxLayout" name="deviceLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
+       <!-- Port Selection -->
+       <item>
+        <widget class="QComboBox" name="portList"/>
+       </item>
+       <!-- Connected Device Label (shown when connected) -->
+       <item>
+        <widget class="QLabel" name="connectedDeviceLabel">
+         <property name="text">
+          <string></string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="styleSheet">
+          <string>font-weight: bold;</string>
+         </property>
+        </widget>
+       </item>
+       <!-- Refresh and Connect Buttons -->
+       <item>
+        <layout class="QHBoxLayout" name="connectionLayout">
+         <item>
+          <widget class="QPushButton" name="refreshPorts">
+           <property name="text">
+            <string>Refresh Devices</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="connectDevice">
+           <property name="text">
+            <string>Connect</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <!-- Auto-connect checkbox -->
+       <item>
+        <widget class="QCheckBox" name="autoConnectCheckbox">
+         <property name="text">
+          <string>Auto-connect on startup</string>
+         </property>
+        </widget>
+       </item>
+       <!-- Separator -->
+       <item>
+        <widget class="QFrame" name="separator1">
+         <property name="frameShape">
+          <enum>QFrame::HLine</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Sunken</enum>
+         </property>
+        </widget>
+       </item>
+       <!-- Detect Button -->
+       <item>
+        <widget class="QPushButton" name="detectRom">
+         <property name="text">
+          <string>Detect Cart Chip</string>
+         </property>
+        </widget>
+       </item>
+       <!-- Backup Buttons -->
+       <item>
+        <layout class="QHBoxLayout" name="backupLayout">
+         <item>
+          <widget class="QPushButton" name="readRom">
+           <property name="text">
+            <string>Backup Cart ROM</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="readSave">
+           <property name="text">
+            <string>Backup Cart Save</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <!-- Tall spacer (shown when disconnected to push device box up) -->
+    <item>
+     <widget class="QWidget" name="disconnectedSpacer">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>400</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>400</width>
+        <height>400</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background: transparent;</string>
+      </property>
+     </widget>
+    </item>
+    <!-- ROM Group Box -->
+    <item>
+     <widget class="QGroupBox" name="romGroupBox">
+      <property name="title">
+       <string>ROM:</string>
+      </property>
+      <layout class="QVBoxLayout" name="romLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
+       <!-- ROM SIZE Section -->
+       <item>
+        <layout class="QHBoxLayout" name="romSizeLayout">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>SIZE</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="flashsize">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="currentIndex">
+            <number>2</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>128K</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>256K</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>512K</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>1M</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2M</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>4M</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <!-- Erase Buttons -->
+       <item>
+        <layout class="QHBoxLayout" name="eraseLayout">
+         <item>
+          <widget class="QPushButton" name="eraseBySize">
+           <property name="text">
+            <string>Erase First 512K</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="eraseFlash">
+           <property name="text">
+            <string>Erase Entire Cart</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <!-- Select ROM Button -->
+       <item>
+        <widget class="QPushButton" name="selectRomButton">
+         <property name="text">
+          <string>Select ROM</string>
+         </property>
+        </widget>
+       </item>
+       <!-- Selected ROM Info (hidden initially) -->
+       <item>
+        <widget class="QLabel" name="selectedRomInfo">
+         <property name="text">
+          <string></string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <!-- Write ROM to Cart Button (hidden initially) -->
+       <item>
+        <widget class="QPushButton" name="writeRom">
+         <property name="text">
+          <string>Write ROM to Cart</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <!-- SRAM Group Box -->
+    <item>
+     <widget class="QGroupBox" name="sramGroupBox">
+      <property name="title">
+       <string>SRAM:</string>
+      </property>
+      <layout class="QVBoxLayout" name="sramLayout">
+       <property name="spacing">
+        <number>8</number>
+       </property>
+       <!-- SRAM SIZE Section -->
+       <item>
+        <layout class="QHBoxLayout" name="sramSizeLayout">
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>SIZE</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="sramsize">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <item>
+            <property name="text">
+             <string>32K</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>8K</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <!-- Write Save to Cart Button -->
+       <item>
+        <widget class="QPushButton" name="writeSave">
+         <property name="text">
+          <string>Write Save to Cart</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <!-- Progress Bar -->
+    <item>
+     <widget class="QProgressBar" name="progressBar">
+      <property name="value">
+       <number>0</number>
+      </property>
+      <property name="textVisible">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <!-- Log Group Box -->
+    <item>
+     <widget class="QGroupBox" name="groupBox_3">
+      <property name="title">
+       <string>Log:</string>
+      </property>
+      <layout class="QVBoxLayout" name="logLayout">
+       <item>
+        <widget class="QTextBrowser" name="infoDisplay">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>100</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
