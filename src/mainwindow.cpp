@@ -598,7 +598,7 @@ void MainWindow::on_readRom_clicked()
     QString fileName;
     ui->infoDisplay->clear();
     if (COM->isOpen()){
-       fileName = QFileDialog::getSaveFileName(this, tr("Please select the ROM file to burn"), getLastDirectory("lastRomDir"), tr("MDROM files (*.bin);;All files (*.*)"));
+       fileName = QFileDialog::getSaveFileName(this, tr("Please select the ROM file to burn"), getLastDirectory("lastRomDir"), tr("MDROM files (*.bin *.gen);;All files (*.*)"));
        if (!fileName.isEmpty()) {
            saveLastDirectory("lastRomDir", fileName);
            file.setFileName(fileName);
@@ -926,7 +926,7 @@ void MainWindow::on_flashsize_currentTextChanged(const QString &text)
 
 void MainWindow::on_selectRomButton_clicked()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select ROM File"), getLastDirectory("lastRomDir"), tr("MDROM files (*.bin *.md *.smd);;All files (*.*)"));
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Select ROM File"), getLastDirectory("lastRomDir"), tr("MDROM files (*.bin *.md *.smd *.gen);;All files (*.*)"));
     if (fileName.isEmpty()) {
         return;
     }
