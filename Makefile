@@ -44,17 +44,32 @@ endif
 CORE_SRC = src/flashmd_core.c
 CLI_SRC = src/flashmd_cli.c
 GUI_SRC = src/flashmd_gui.c include/tinyfiledialogs.c
+QT_SRC = src/flashmd_qt.cpp
 LEGACY_SRC = main.c
 
 # Include paths
 INCLUDES = -Isrc -Iinclude
 
+# Qt configuration
+ifeq ($(UNAME_S),Darwin)
+    # macOS with Homebrew - try Qt6 first, then Qt5
+    QT_MOC = $(shell find /opt/homebrew/Cellar/qtbase -name "moc" -type f 2>/dev/null | head -1)
+    QT_CFLAGS = $(shell pkg-config --cflags Qt6Widgets 2>/dev/null || pkg-config --cflags Qt5Widgets 2>/dev/null)
+    QT_LDFLAGS = $(shell pkg-config --libs Qt6Widgets 2>/dev/null || pkg-config --libs Qt5Widgets 2>/dev/null)
+else
+    # Linux - try Qt5 first (more common), then Qt6
+    QT_CFLAGS = $(shell pkg-config --cflags Qt5Widgets 2>/dev/null || pkg-config --cflags Qt6Widgets 2>/dev/null)
+    QT_LDFLAGS = $(shell pkg-config --libs Qt5Widgets 2>/dev/null || pkg-config --libs Qt6Widgets 2>/dev/null)
+    QT_MOC = $(shell which moc-qt5 2>/dev/null || which moc 2>/dev/null || echo "moc")
+endif
+
 # Targets
 CLI_TARGET = flashmd
 GUI_TARGET = flashmd-gui
+QT_TARGET = flashmd-qt
 LEGACY_TARGET = flashmd-legacy
 
-.PHONY: all cli gui legacy clean help raylib
+.PHONY: all cli gui gui-qt legacy clean help raylib
 
 # Default: build CLI (backward compatible)
 all: cli
@@ -92,8 +107,20 @@ legacy: $(LEGACY_TARGET)
 $(LEGACY_TARGET): $(LEGACY_SRC)
 	$(CC) $(CFLAGS) $(CFLAGS_USB) -o $@ $< $(LDFLAGS_USB)
 
+# Qt GUI build
+gui-qt: $(QT_TARGET)
+
+src/moc_flashmd_qt.cpp: $(QT_SRC)
+	$(QT_MOC) $(QT_SRC) -o src/moc_flashmd_qt.cpp
+
+src/flashmd_core_qt.o: $(CORE_SRC)
+	$(CC) $(CFLAGS) $(CFLAGS_USB) $(INCLUDES) -c -o $@ $(CORE_SRC)
+
+$(QT_TARGET): src/flashmd_core_qt.o $(QT_SRC) src/moc_flashmd_qt.cpp
+	g++ -std=c++17 $(CFLAGS) $(CFLAGS_USB) $(QT_CFLAGS) $(INCLUDES) -fPIC -o $@ src/flashmd_core_qt.o $(QT_SRC) $(LDFLAGS_USB) $(QT_LDFLAGS)
+
 clean:
-	rm -f $(CLI_TARGET) $(GUI_TARGET) $(LEGACY_TARGET)
+	rm -f $(CLI_TARGET) $(GUI_TARGET) $(QT_TARGET) $(LEGACY_TARGET) src/moc_flashmd_qt.cpp src/flashmd_core_qt.o
 ifeq ($(USE_SUBMODULE_RAYLIB),1)
 	$(MAKE) -C $(RAYLIB_SRC) clean || true
 endif
@@ -101,19 +128,20 @@ endif
 help:
 	@echo "FlashMD Build Targets:"
 	@echo "  make cli     - Build command-line version (default)"
-	@echo "  make gui     - Build GUI version (builds raylib from submodule if present)"
+	@echo "  make gui     - Build raylib GUI version"
+	@echo "  make gui-qt  - Build Qt GUI version (recommended for Linux)"
 	@echo "  make raylib  - Build raylib library from submodule"
 	@echo "  make legacy  - Build from original main.c"
-	@echo "  make clean   - Remove built binaries (and raylib if using submodule)"
+	@echo "  make clean   - Remove built binaries"
 	@echo ""
 	@echo "Dependencies:"
-	@echo "  CLI: libusb-1.0"
-	@echo "  GUI: libusb-1.0, raylib (submodule or system)"
+	@echo "  CLI:    libusb-1.0"
+	@echo "  gui:    libusb-1.0, raylib"
+	@echo "  gui-qt: libusb-1.0, Qt5"
 	@echo ""
 	@echo "Install dependencies:"
-	@echo "  macOS:  brew install libusb raylib"
-	@echo "  Ubuntu: sudo apt install libusb-1.0-0-dev"
-	@echo "          (raylib built from include/raylib submodule)"
+	@echo "  macOS:  brew install libusb raylib qt@5"
+	@echo "  Linux:  sudo apt install libusb-1.0-0-dev qtbase5-dev"
 	@echo ""
-	@echo "Setup submodule (if not already done):"
-	@echo "  git submodule update --init --recursive"
+	@echo "Running on Linux:"
+	@echo "  sudo ./flashmd-qt   (Qt handles USB permissions gracefully)"
