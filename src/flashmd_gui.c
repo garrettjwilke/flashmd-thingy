@@ -116,7 +116,7 @@ typedef enum {
 } operation_t;
 
 /* Size options for dropdown */
-static const uint32_t size_values[] = {0, 512, 1024, 2048, 4096};
+static const uint32_t size_values[] = {0, 128, 256, 512, 1024, 2048, 4096};
 
 /* Global font */
 static Font app_font = {0};
@@ -596,8 +596,8 @@ int main(void) {
     current_theme = &THEME_DARK;
 
     /* Size options array for dropdown */
-    const char *size_opts[] = {"Auto", "512 KB", "1 MB", "2 MB", "4 MB"};
-    int size_opt_count = 5;
+    const char *size_opts[] = {"Auto", "128 KB", "256 KB", "512 KB", "1 MB", "2 MB", "4 MB"};
+    int size_opt_count = 7;
     Rectangle dropdown_bounds = {0};
 
     /* Welcome message */
