@@ -29,12 +29,12 @@ endif
 
 # Targets
 CLI_TARGET = flashmd
-QT_TARGET = flashmd-qt
+QT_TARGET = flashmd-gui
 
-.PHONY: all cli gui-qt clean help
+.PHONY: all cli gui clean help
 
 # Default: build CLI (backward compatible)
-all: cli
+all: cli gui
 
 # CLI build
 cli: $(CLI_TARGET)
@@ -43,7 +43,7 @@ $(CLI_TARGET): $(CORE_SRC) $(CLI_SRC)
 	$(CC) $(CFLAGS) $(CFLAGS_USB) $(INCLUDES) -o $@ $^ $(LDFLAGS_USB)
 
 # Qt GUI build
-gui-qt: $(QT_TARGET)
+gui: $(QT_TARGET)
 
 src/moc_flashmd_qt.cpp: $(QT_SRC)
 	$(QT_MOC) $(QT_SRC) -o src/moc_flashmd_qt.cpp
@@ -60,16 +60,16 @@ clean:
 help:
 	@echo "FlashMD Build Targets:"
 	@echo "  make cli     - Build command-line version (default)"
-	@echo "  make gui-qt  - Build Qt GUI version (recommended)"
+	@echo "  make gui  - Build Qt GUI version (recommended)"
 	@echo "  make clean   - Remove built binaries"
 	@echo ""
 	@echo "Dependencies:"
 	@echo "  CLI:    libusb-1.0"
-	@echo "  gui-qt: libusb-1.0, Qt5"
+	@echo "  gui: libusb-1.0, Qt5"
 	@echo ""
 	@echo "Install dependencies:"
 	@echo "  macOS:  brew install libusb qt@5"
 	@echo "  Linux:  sudo apt install libusb-1.0-0-dev qtbase5-dev"
 	@echo ""
 	@echo "Running on Linux:"
-	@echo "  sudo ./flashmd-qt   (Qt handles USB permissions gracefully)"
+	@echo "  sudo ./flashmd-gui"
