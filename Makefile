@@ -12,7 +12,7 @@ CLI_SRC = src/flashmd_cli.c
 QT_SRC = src/flashmd_qt.cpp
 
 # Include paths
-INCLUDES = -Isrc -Iinclude
+INCLUDES = -Isrc
 
 # Qt configuration
 ifeq ($(UNAME_S),Darwin)
