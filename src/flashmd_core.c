@@ -147,13 +147,15 @@ static void print_filtered(const flashmd_config_t *config, const char *data, siz
  */
 static void fix_file_ownership_fd(int fd) {
     if (real_uid != (uid_t)-1 && real_gid != (gid_t)-1 && fd >= 0) {
-        fchown(fd, real_uid, real_gid);
+        int _unused = fchown(fd, real_uid, real_gid);
+        (void)_unused;
     }
 }
 
 static void fix_file_ownership(const char *filename) {
     if (real_uid != (uid_t)-1 && real_gid != (gid_t)-1) {
-        chown(filename, real_uid, real_gid);
+        int _unused = chown(filename, real_uid, real_gid);
+        (void)_unused;
     }
 }
 
@@ -740,7 +742,8 @@ flashmd_result_t flashmd_read_rom(const char *filename, uint32_t size_kb,
             }
             saved = total_bytes;
         } else if (saved > total_bytes) {
-            ftruncate(fileno(fp), total_bytes);
+            int _unused = ftruncate(fileno(fp), total_bytes);
+            (void)_unused;
             saved = total_bytes;
         }
     }
@@ -945,7 +948,8 @@ flashmd_result_t flashmd_write_sram(const char *filename, const flashmd_config_t
             to_read = file_size - written;
             memset(buffer, 0x00, DATA_CHUNK_SIZE);
         }
-        fread(buffer, 1, to_read, fp);
+        size_t _unused = fread(buffer, 1, to_read, fp);
+        (void)_unused;
 
         if (usb_write(buffer, DATA_CHUNK_SIZE) < 0) {
             fclose(fp);

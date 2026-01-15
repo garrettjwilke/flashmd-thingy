@@ -134,14 +134,16 @@ static int g_ipcWriteFd = -1;
 static void ipcProgressCb(uint32_t current, uint32_t total, void *) {
     if (g_ipcWriteFd < 0) return;
     IpcProgress msg = {IPC_PROGRESS, current, total};
-    write(g_ipcWriteFd, &msg, sizeof(msg));
+    ssize_t _unused = write(g_ipcWriteFd, &msg, sizeof(msg));
+    (void)_unused;
 }
 
 static void ipcMessageCb(const char *text, int isError, void *) {
     if (g_ipcWriteFd < 0) return;
     IpcLog msg = {IPC_LOG, isError, {}};
     strncpy(msg.message, text, sizeof(msg.message) - 1);
-    write(g_ipcWriteFd, &msg, sizeof(msg));
+    ssize_t _unused = write(g_ipcWriteFd, &msg, sizeof(msg));
+    (void)_unused;
 }
 
 /* USB handler loop - runs in root process */
@@ -167,9 +169,11 @@ static void usbHandlerLoop(int readFd, int writeFd) {
             IpcLog logMsg = {IPC_LOG, 1, {}};
             snprintf(logMsg.message, sizeof(logMsg.message),
                      "Could not open USB: %s", flashmd_error_string(result));
-            write(writeFd, &logMsg, sizeof(logMsg));
+            ssize_t _unused1 = write(writeFd, &logMsg, sizeof(logMsg));
+            (void)_unused1;
             IpcResult resMsg = {IPC_RESULT, (int)result};
-            write(writeFd, &resMsg, sizeof(resMsg));
+            ssize_t _unused2 = write(writeFd, &resMsg, sizeof(resMsg));
+            (void)_unused2;
             continue;
         }
 
@@ -189,7 +193,8 @@ static void usbHandlerLoop(int readFd, int writeFd) {
         flashmd_close();
 
         IpcResult resMsg = {IPC_RESULT, (int)result};
-        write(writeFd, &resMsg, sizeof(resMsg));
+        ssize_t _unused = write(writeFd, &resMsg, sizeof(resMsg));
+        (void)_unused;
     }
     g_ipcWriteFd = -1;
 }
@@ -313,7 +318,8 @@ protected:
         cmd.verbose = m_verbose;
         cmd.fullErase = m_fullErase;
 
-        write(g_pipeToUsb[1], &cmd, sizeof(cmd));
+        ssize_t _unused_write = write(g_pipeToUsb[1], &cmd, sizeof(cmd));
+        (void)_unused_write;
 
         /* Read responses until we get a result */
         while (true) {
@@ -327,19 +333,22 @@ protected:
             if (msgType == IPC_PROGRESS) {
                 IpcProgress msg;
                 msg.type = msgType;
-                read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                ssize_t _unused = read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                (void)_unused;
                 emit progressChanged(msg.current, msg.total);
             }
             else if (msgType == IPC_LOG) {
                 IpcLog msg;
                 msg.type = msgType;
-                read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                ssize_t _unused = read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                (void)_unused;
                 emit logMessage(QString::fromUtf8(msg.message), msg.isError != 0);
             }
             else if (msgType == IPC_RESULT) {
                 IpcResult msg;
                 msg.type = msgType;
-                read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                ssize_t _unused = read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                (void)_unused;
 
                 if (msg.result == FLASHMD_OK) {
                     emit operationFinished(true, QString());
@@ -380,8 +389,8 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
         setWindowTitle("flashmd-thingy");
-        setMinimumSize(700, 900);
-        resize(700, 1000);
+        setMinimumSize(550, 790);
+        resize(550, 825);
         m_currentTheme = getTheme();
 
         setupUi();
@@ -646,11 +655,9 @@ private:
         }
         romLayout->addWidget(m_sizeCombo, 0, 1);
 
-        m_noTrimCheck = new QCheckBox("No trim");
-        romLayout->addWidget(m_noTrimCheck, 0, 2);
-
         m_writeRomBtn = new QPushButton("Write ROM");
         m_readRomBtn = new QPushButton("Read ROM");
+        m_noTrimCheck = new QCheckBox("No trim");
         m_eraseBtn = new QPushButton("Erase");
         m_fullEraseCheck = new QCheckBox("Full Erase");
 
@@ -660,8 +667,9 @@ private:
 
         romLayout->addWidget(m_writeRomBtn, 1, 0);
         romLayout->addWidget(m_readRomBtn, 1, 1);
-        romLayout->addWidget(m_eraseBtn, 1, 2);
-        romLayout->addWidget(m_fullEraseCheck, 1, 3);
+        romLayout->addWidget(m_noTrimCheck, 1, 2);
+        romLayout->addWidget(m_eraseBtn, 2, 0);
+        romLayout->addWidget(m_fullEraseCheck, 2, 1);
 
         mainLayout->addWidget(romGroup);
 
@@ -702,7 +710,9 @@ private:
 
         m_console = new QTextEdit();
         m_console->setReadOnly(true);
-        mainLayout->addWidget(m_console, 1);
+        m_console->setMaximumHeight(120);
+        m_console->setMinimumHeight(100);
+        mainLayout->addWidget(m_console, 0);
 
         /* Bottom buttons */
         QHBoxLayout *bottomLayout = new QHBoxLayout();
@@ -1193,7 +1203,8 @@ int main(int argc, char *argv[]) {
     if (g_usingIpc) {
         IpcCommand quit = {};
         quit.type = IPC_QUIT;
-        write(g_pipeToUsb[1], &quit, sizeof(quit));
+        ssize_t _unused = write(g_pipeToUsb[1], &quit, sizeof(quit));
+        (void)_unused;
         close(g_pipeToUsb[1]);
         close(g_pipeToGui[0]);
     }
