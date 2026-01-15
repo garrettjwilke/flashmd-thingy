@@ -3,7 +3,7 @@
  * Sega Genesis/Mega Drive ROM Flasher - Graphical Interface
  *
  * Uses raylib + raygui for the UI
- * Uses pthreads for non-blocking USB operations
+ * Uses fork + pipes for privilege separation (GUI runs as user, USB as root)
  */
 
 #include "flashmd_core.h"
@@ -14,6 +14,12 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <pwd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <signal.h>
 
 #include <raylib.h>
 
@@ -115,6 +121,54 @@ typedef enum {
     OP_WRITE_SRAM
 } operation_t;
 
+/*
+ * IPC message types for privilege separation
+ * GUI (user) <-> USB handler (root) communication
+ */
+typedef enum {
+    IPC_MSG_COMMAND = 1,    /* GUI -> USB: start operation */
+    IPC_MSG_PROGRESS,       /* USB -> GUI: progress update */
+    IPC_MSG_LOG,            /* USB -> GUI: log message */
+    IPC_MSG_RESULT,         /* USB -> GUI: operation complete */
+    IPC_MSG_QUIT            /* GUI -> USB: shutdown */
+} ipc_msg_type_t;
+
+/* Command message from GUI to USB handler */
+typedef struct {
+    ipc_msg_type_t type;
+    operation_t operation;
+    char filepath[512];
+    uint32_t size_kb;
+    int no_trim;
+    int verbose;
+    int full_erase;
+} ipc_command_t;
+
+/* Progress message from USB handler to GUI */
+typedef struct {
+    ipc_msg_type_t type;
+    uint32_t current;
+    uint32_t total;
+} ipc_progress_t;
+
+/* Log message from USB handler to GUI */
+typedef struct {
+    ipc_msg_type_t type;
+    int is_error;
+    char message[256];
+} ipc_log_t;
+
+/* Result message from USB handler to GUI */
+typedef struct {
+    ipc_msg_type_t type;
+    flashmd_result_t result;
+} ipc_result_t;
+
+/* Pipes for IPC (global for signal handler access) */
+static int pipe_to_usb[2] = {-1, -1};   /* GUI writes, USB reads */
+static int pipe_to_gui[2] = {-1, -1};   /* USB writes, GUI reads */
+static pid_t usb_handler_pid = -1;
+
 /* Size options for dropdown */
 static const uint32_t size_values[] = {0, 128, 256, 512, 1024, 2048, 4096};
 
@@ -167,6 +221,9 @@ typedef struct {
     int op_no_trim;
     int op_verbose;
     bool op_full_erase;
+
+    /* Privilege separation mode */
+    bool using_ipc;
 } gui_state_t;
 
 static gui_state_t state = {0};
@@ -315,7 +372,226 @@ done:
 }
 
 /*
- * Start an operation in the worker thread
+ * IPC callbacks for USB handler process
+ */
+static int ipc_write_fd = -1;  /* Set by USB handler for callbacks */
+
+static void ipc_progress_cb(uint32_t current, uint32_t total, void *user_data) {
+    (void)user_data;
+    if (ipc_write_fd < 0) return;
+
+    ipc_progress_t msg = {
+        .type = IPC_MSG_PROGRESS,
+        .current = current,
+        .total = total
+    };
+    write(ipc_write_fd, &msg, sizeof(msg));
+}
+
+static void ipc_message_cb(const char *text, int is_error, void *user_data) {
+    (void)user_data;
+    if (ipc_write_fd < 0) return;
+
+    ipc_log_t msg = {
+        .type = IPC_MSG_LOG,
+        .is_error = is_error
+    };
+    strncpy(msg.message, text, sizeof(msg.message) - 1);
+    msg.message[sizeof(msg.message) - 1] = '\0';
+    write(ipc_write_fd, &msg, sizeof(msg));
+}
+
+/*
+ * USB handler process main loop (runs as root)
+ * Receives commands from GUI, executes USB operations, sends results back
+ */
+static void usb_handler_loop(int read_fd, int write_fd) {
+    ipc_write_fd = write_fd;  /* For callbacks */
+
+    flashmd_config_t config;
+    ipc_command_t cmd;
+
+    while (1) {
+        /* Wait for command from GUI */
+        ssize_t n = read(read_fd, &cmd, sizeof(cmd));
+        if (n <= 0) {
+            /* Pipe closed or error - GUI exited */
+            break;
+        }
+
+        if (cmd.type == IPC_MSG_QUIT) {
+            break;
+        }
+
+        if (cmd.type != IPC_MSG_COMMAND) {
+            continue;
+        }
+
+        /* Setup config with IPC callbacks */
+        flashmd_config_init(&config);
+        config.verbose = cmd.verbose;
+        config.no_trim = cmd.no_trim;
+        config.progress = ipc_progress_cb;
+        config.message = ipc_message_cb;
+        config.user_data = NULL;
+
+        flashmd_result_t result = FLASHMD_OK;
+
+        /* Open USB connection */
+        result = flashmd_open();
+        if (result != FLASHMD_OK) {
+            ipc_log_t log_msg = {.type = IPC_MSG_LOG, .is_error = 1};
+            snprintf(log_msg.message, sizeof(log_msg.message),
+                     "Error: Could not open USB device: %s", flashmd_error_string(result));
+            write(write_fd, &log_msg, sizeof(log_msg));
+            goto send_result;
+        }
+
+        /* Execute operation */
+        switch (cmd.operation) {
+            case OP_CONNECT:
+                result = flashmd_connect(&config);
+                break;
+            case OP_CHECK_ID:
+                result = flashmd_check_id(&config);
+                break;
+            case OP_ERASE:
+                {
+                    uint32_t erase_size = cmd.size_kb;
+                    if (cmd.full_erase) {
+                        erase_size = 0;
+                    } else if (erase_size == 0) {
+                        erase_size = 4096;
+                    }
+                    result = flashmd_erase(erase_size, &config);
+                }
+                break;
+            case OP_READ_ROM:
+                result = flashmd_read_rom(cmd.filepath, cmd.size_kb, &config);
+                break;
+            case OP_WRITE_ROM:
+                result = flashmd_write_rom(cmd.filepath, cmd.size_kb, &config);
+                break;
+            case OP_READ_SRAM:
+                result = flashmd_read_sram(cmd.filepath, &config);
+                break;
+            case OP_WRITE_SRAM:
+                result = flashmd_write_sram(cmd.filepath, &config);
+                break;
+            default:
+                break;
+        }
+
+        flashmd_close();
+
+send_result:
+        /* Send result back to GUI */
+        {
+            ipc_result_t res_msg = {
+                .type = IPC_MSG_RESULT,
+                .result = result
+            };
+            write(write_fd, &res_msg, sizeof(res_msg));
+        }
+    }
+
+    ipc_write_fd = -1;
+}
+
+/*
+ * Send command to USB handler process via IPC
+ */
+static void send_ipc_command(operation_t op) {
+    ipc_command_t cmd = {
+        .type = IPC_MSG_COMMAND,
+        .operation = op,
+        .size_kb = size_values[state.rom_size_index],
+        .no_trim = state.no_trim,
+        .verbose = state.verbose_mode,
+        .full_erase = state.full_erase
+    };
+
+    const char *filepath = (op == OP_READ_SRAM || op == OP_WRITE_SRAM)
+                           ? state.sram_filepath : state.rom_filepath;
+    strncpy(cmd.filepath, filepath, sizeof(cmd.filepath) - 1);
+    cmd.filepath[sizeof(cmd.filepath) - 1] = '\0';
+
+    write(pipe_to_usb[1], &cmd, sizeof(cmd));
+}
+
+/*
+ * Process incoming IPC messages from USB handler (non-blocking)
+ */
+static void process_ipc_messages(void) {
+    /* Set non-blocking read */
+    int flags = fcntl(pipe_to_gui[0], F_GETFL, 0);
+    fcntl(pipe_to_gui[0], F_SETFL, flags | O_NONBLOCK);
+
+    while (1) {
+        /* Peek at message type */
+        ipc_msg_type_t msg_type;
+        ssize_t n = read(pipe_to_gui[0], &msg_type, sizeof(msg_type));
+
+        if (n <= 0) {
+            /* No more messages */
+            break;
+        }
+
+        switch (msg_type) {
+            case IPC_MSG_PROGRESS:
+                {
+                    ipc_progress_t msg;
+                    msg.type = msg_type;
+                    /* Read rest of message */
+                    read(pipe_to_gui[0], ((char*)&msg) + sizeof(msg_type),
+                         sizeof(msg) - sizeof(msg_type));
+
+                    pthread_mutex_lock(&state.state_mutex);
+                    state.progress_value = (float)msg.current / (float)msg.total;
+                    snprintf(state.progress_text, sizeof(state.progress_text),
+                             "%u / %u KB", msg.current / 1024, msg.total / 1024);
+                    pthread_mutex_unlock(&state.state_mutex);
+                }
+                break;
+
+            case IPC_MSG_LOG:
+                {
+                    ipc_log_t msg;
+                    msg.type = msg_type;
+                    read(pipe_to_gui[0], ((char*)&msg) + sizeof(msg_type),
+                         sizeof(msg) - sizeof(msg_type));
+                    console_add_line(msg.message);
+                }
+                break;
+
+            case IPC_MSG_RESULT:
+                {
+                    ipc_result_t msg;
+                    msg.type = msg_type;
+                    read(pipe_to_gui[0], ((char*)&msg) + sizeof(msg_type),
+                         sizeof(msg) - sizeof(msg_type));
+
+                    pthread_mutex_lock(&state.state_mutex);
+                    state.operation_running = 0;
+                    state.operation_result = msg.result;
+                    if (msg.result == FLASHMD_OK) {
+                        state.device_connected = 1;
+                    }
+                    pthread_mutex_unlock(&state.state_mutex);
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    /* Restore blocking mode */
+    fcntl(pipe_to_gui[0], F_SETFL, flags);
+}
+
+/*
+ * Start an operation in the worker thread or via IPC
  */
 static void start_operation(operation_t op) {
     if (state.operation_running) return;
@@ -325,16 +601,21 @@ static void start_operation(operation_t op) {
     state.progress_value = 0.0f;
     strcpy(state.progress_text, "Starting...");
 
-    /* Copy parameters for worker thread */
-    strcpy(state.op_filepath, (op == OP_READ_SRAM || op == OP_WRITE_SRAM)
-           ? state.sram_filepath : state.rom_filepath);
-    state.op_size_kb = size_values[state.rom_size_index];
-    state.op_no_trim = state.no_trim;
-    state.op_verbose = state.verbose_mode;
-    state.op_full_erase = state.full_erase;
+    if (state.using_ipc) {
+        /* Send command to USB handler process */
+        send_ipc_command(op);
+    } else {
+        /* Copy parameters for worker thread */
+        strcpy(state.op_filepath, (op == OP_READ_SRAM || op == OP_WRITE_SRAM)
+               ? state.sram_filepath : state.rom_filepath);
+        state.op_size_kb = size_values[state.rom_size_index];
+        state.op_no_trim = state.no_trim;
+        state.op_verbose = state.verbose_mode;
+        state.op_full_erase = state.full_erase;
 
-    pthread_create(&state.worker_thread, NULL, worker_thread_func, NULL);
-    pthread_detach(state.worker_thread);
+        pthread_create(&state.worker_thread, NULL, worker_thread_func, NULL);
+        pthread_detach(state.worker_thread);
+    }
 }
 
 /*
@@ -572,13 +853,74 @@ int main(void) {
     /* Initialize mutex */
     pthread_mutex_init(&state.state_mutex, NULL);
 
-    /* Set real user ID for file ownership */
+    /* Check if we need privilege separation:
+     * If running as root (uid 0) and SUDO_UID is set, we fork:
+     * - Parent (root): handles USB operations
+     * - Child: drops to original user, runs GUI
+     */
     const char *sudo_uid_str = getenv("SUDO_UID");
     const char *sudo_gid_str = getenv("SUDO_GID");
-    if (sudo_uid_str && sudo_gid_str) {
-        flashmd_set_real_ids(atoi(sudo_uid_str), atoi(sudo_gid_str));
-    } else {
-        flashmd_set_real_ids(getuid(), getgid());
+    uid_t real_uid = sudo_uid_str ? (uid_t)atoi(sudo_uid_str) : getuid();
+    gid_t real_gid = sudo_gid_str ? (gid_t)atoi(sudo_gid_str) : getgid();
+
+#ifdef __linux__
+    if (getuid() == 0 && sudo_uid_str && sudo_gid_str) {
+        /* Running as root via sudo on Linux - use privilege separation */
+
+        /* Create pipes for IPC */
+        if (pipe(pipe_to_usb) < 0 || pipe(pipe_to_gui) < 0) {
+            fprintf(stderr, "Failed to create pipes: %s\n", strerror(errno));
+            return 1;
+        }
+
+        pid_t pid = fork();
+        if (pid < 0) {
+            fprintf(stderr, "Failed to fork: %s\n", strerror(errno));
+            return 1;
+        }
+
+        if (pid > 0) {
+            /* Parent process - stays root, handles USB */
+            usb_handler_pid = pid;
+
+            /* Close unused pipe ends */
+            close(pipe_to_usb[1]);  /* Parent reads from this */
+            close(pipe_to_gui[0]);  /* Parent writes to this */
+
+            /* Set up file ownership for created files */
+            flashmd_set_real_ids(real_uid, real_gid);
+
+            /* Run USB handler loop */
+            usb_handler_loop(pipe_to_usb[0], pipe_to_gui[1]);
+
+            /* Cleanup and wait for child */
+            close(pipe_to_usb[0]);
+            close(pipe_to_gui[1]);
+            waitpid(pid, NULL, 0);
+
+            return 0;
+        }
+
+        /* Child process - drops privileges, runs GUI */
+
+        /* Close unused pipe ends */
+        close(pipe_to_usb[0]);  /* Child writes to this */
+        close(pipe_to_gui[1]);  /* Child reads from this */
+
+        /* Drop privileges back to original user */
+        if (setgid(real_gid) < 0 || setuid(real_uid) < 0) {
+            fprintf(stderr, "Failed to drop privileges: %s\n", strerror(errno));
+            _exit(1);
+        }
+
+        /* Mark that we're using IPC mode */
+        state.using_ipc = true;
+    } else
+#endif
+    {
+        /* Not using privilege separation - normal mode */
+        flashmd_set_real_ids(real_uid, real_gid);
+        state.using_ipc = false;
     }
 
     /* Initialize raylib */
@@ -608,6 +950,11 @@ int main(void) {
 
     /* Main loop */
     while (!WindowShouldClose()) {
+        /* Process IPC messages if in privilege separation mode */
+        if (state.using_ipc) {
+            process_ipc_messages();
+        }
+
         /* Update theme */
         current_theme = state.dark_mode ? &THEME_DARK : &THEME_LIGHT;
 
@@ -1280,6 +1627,14 @@ int main(void) {
     }
     CloseWindow();
     pthread_mutex_destroy(&state.state_mutex);
+
+    /* If using IPC, send quit message to USB handler and close pipes */
+    if (state.using_ipc) {
+        ipc_command_t quit_cmd = {.type = IPC_MSG_QUIT};
+        write(pipe_to_usb[1], &quit_cmd, sizeof(quit_cmd));
+        close(pipe_to_usb[1]);
+        close(pipe_to_gui[0]);
+    }
 
     return 0;
 }
