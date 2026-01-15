@@ -72,6 +72,17 @@ static void savePath(const QString &key, const QString &path) {
     settings.sync();
 }
 
+static QString getTheme() {
+    QSettings settings(getConfigPath(), QSettings::IniFormat);
+    return settings.value("theme", "dark").toString();
+}
+
+static void saveTheme(const QString &theme) {
+    QSettings settings(getConfigPath(), QSettings::IniFormat);
+    settings.setValue("theme", theme);
+    settings.sync();
+}
+
 /*
  * IPC for privilege separation (Linux only)
  * When run with sudo, we fork: parent (root) handles USB, child (user) runs GUI
@@ -369,10 +380,12 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
         setWindowTitle("flashmd-thingy");
-        setMinimumSize(500, 600);
+        setMinimumSize(600, 700);
+        m_currentTheme = getTheme();
 
         setupUi();
         setupWorker();
+        applyTheme(m_currentTheme);
 
         log("flashmd-thingy");
     }
@@ -520,6 +533,15 @@ private slots:
         m_console->clear();
     }
 
+    void onThemeChanged() {
+        m_currentTheme = (m_currentTheme == "dark") ? "light" : "dark";
+        saveTheme(m_currentTheme);
+        if (m_themeBtn) {
+            m_themeBtn->setText(m_currentTheme == "dark" ? "☀️" : "🌙");
+        }
+        applyTheme(m_currentTheme);
+    }
+
     void onProgressChanged(int current, int total) {
         m_progressBar->setMaximum(total);
         m_progressBar->setValue(current);
@@ -527,8 +549,9 @@ private slots:
     }
 
     void onLogMessage(const QString &message, bool isError) {
+        QString errorColor = (m_currentTheme == "light") ? "#ff3b30" : "#ff453a";
         if (isError) {
-            m_console->append("<span style='color: #ff6666;'>" + message.toHtmlEscaped() + "</span>");
+            m_console->append("<span style='color: " + errorColor + ";'>" + message.toHtmlEscaped() + "</span>");
         } else {
             m_console->append(message.toHtmlEscaped());
         }
@@ -539,7 +562,7 @@ private slots:
 
         if (success) {
             m_deviceStatus->setText("Connected");
-            m_deviceStatus->setStyleSheet("color: green; font-weight: bold;");
+            m_deviceStatus->setStyleSheet("color: #34c759; font-weight: 600; font-size: 13px;");
         } else if (!errorMsg.isEmpty()) {
             log("Error: " + errorMsg);
         }
@@ -551,27 +574,51 @@ private:
         setCentralWidget(central);
 
         QVBoxLayout *mainLayout = new QVBoxLayout(central);
-        mainLayout->setSpacing(10);
+        mainLayout->setSpacing(16);
+        mainLayout->setContentsMargins(20, 20, 20, 20);
 
-        /* Title */
-        QLabel *title = new QLabel("flashmd-thingy");
-        title->setStyleSheet("font-size: 20px; font-weight: bold;");
-        QLabel *subtitle = new QLabel("Sega Genesis ROM Flasher");
-        subtitle->setStyleSheet("color: gray;");
-
+        /* Title section with theme toggle */
         QHBoxLayout *titleLayout = new QHBoxLayout();
-        titleLayout->addWidget(title);
-        titleLayout->addWidget(subtitle);
+        QVBoxLayout *titleTextLayout = new QVBoxLayout();
+        m_titleLabel = new QLabel("flashmd-thingy");
+        m_subtitleLabel = new QLabel("Sega Genesis ROM Flasher");
+        titleTextLayout->addWidget(m_titleLabel);
+        titleTextLayout->addWidget(m_subtitleLabel);
+        titleTextLayout->setSpacing(4);
+        titleLayout->addLayout(titleTextLayout);
         titleLayout->addStretch();
+        
+        // Theme toggle button
+        m_themeBtn = new QPushButton();
+        m_themeBtn->setText(m_currentTheme == "dark" ? "☀️" : "🌙");
+        m_themeBtn->setToolTip("Toggle theme");
+        m_themeBtn->setFixedSize(40, 40);
+        m_themeBtn->setStyleSheet(R"(
+            QPushButton {
+                background-color: transparent;
+                border: 2px solid;
+                border-radius: 8px;
+                font-size: 18px;
+                padding: 0;
+            }
+            QPushButton:hover {
+                background-color: rgba(128, 128, 128, 0.2);
+            }
+        )");
+        connect(m_themeBtn, &QPushButton::clicked, this, &MainWindow::onThemeChanged);
+        titleLayout->addWidget(m_themeBtn);
+        
         mainLayout->addLayout(titleLayout);
 
         /* Device section */
         QGroupBox *deviceGroup = new QGroupBox("Device");
         QHBoxLayout *deviceLayout = new QHBoxLayout(deviceGroup);
+        deviceLayout->setSpacing(12);
+        deviceLayout->setContentsMargins(16, 20, 16, 16);
 
         deviceLayout->addWidget(new QLabel("Status:"));
         m_deviceStatus = new QLabel("Not Connected");
-        m_deviceStatus->setStyleSheet("color: orange; font-weight: bold;");
+        m_deviceStatus->setStyleSheet("color: #ff9500; font-weight: 600; font-size: 13px;");
         deviceLayout->addWidget(m_deviceStatus);
         deviceLayout->addStretch();
 
@@ -587,6 +634,8 @@ private:
         /* ROM Operations section */
         QGroupBox *romGroup = new QGroupBox("ROM Operations");
         QGridLayout *romLayout = new QGridLayout(romGroup);
+        romLayout->setSpacing(12);
+        romLayout->setContentsMargins(16, 20, 16, 16);
 
         romLayout->addWidget(new QLabel("Size:"), 0, 0);
         m_sizeCombo = new QComboBox();
@@ -617,6 +666,8 @@ private:
         /* SRAM Operations section */
         QGroupBox *sramGroup = new QGroupBox("SRAM Operations");
         QHBoxLayout *sramLayout = new QHBoxLayout(sramGroup);
+        sramLayout->setSpacing(12);
+        sramLayout->setContentsMargins(16, 20, 16, 16);
 
         QPushButton *readSramBtn = new QPushButton("Read SRAM");
         QPushButton *writeSramBtn = new QPushButton("Write SRAM");
@@ -631,22 +682,24 @@ private:
 
         /* Progress section */
         QHBoxLayout *progressLayout = new QHBoxLayout();
+        progressLayout->setSpacing(12);
         progressLayout->addWidget(new QLabel("Progress:"));
         m_progressBar = new QProgressBar();
         m_progressBar->setMinimum(0);
         m_progressBar->setValue(0);
         progressLayout->addWidget(m_progressBar, 1);
         m_progressLabel = new QLabel("0 / 0 KB");
+        m_progressLabel->setStyleSheet("color: #86868b; font-size: 12px; font-weight: 500;");
         progressLayout->addWidget(m_progressLabel);
         mainLayout->addLayout(progressLayout);
 
         /* Console section */
         QLabel *consoleLabel = new QLabel("Console Output:");
+        consoleLabel->setStyleSheet("font-weight: 600; font-size: 13px;");
         mainLayout->addWidget(consoleLabel);
 
         m_console = new QTextEdit();
         m_console->setReadOnly(true);
-        m_console->setStyleSheet("font-family: monospace; background-color: #1e1e1e; color: #d4d4d4;");
         mainLayout->addWidget(m_console, 1);
 
         /* Bottom buttons */
@@ -684,8 +737,306 @@ private:
         m_console->append(message);
     }
 
+    void applyTheme(const QString &theme) {
+        QString styleSheet;
+        
+        if (theme == "light") {
+            styleSheet = R"(
+                QMainWindow {
+                    background-color: #f5f5f7;
+                }
+                QWidget {
+                    background-color: #f5f5f7;
+                    color: #1d1d1f;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                QGroupBox {
+                    font-weight: 600;
+                    font-size: 13px;
+                    color: #1d1d1f;
+                    border: 2px solid #e5e5e7;
+                    border-radius: 12px;
+                    margin-top: 12px;
+                    padding-top: 12px;
+                    background-color: #ffffff;
+                }
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    left: 16px;
+                    padding: 0 8px;
+                    background-color: #ffffff;
+                }
+                QPushButton {
+                    background-color: #007aff;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 10px 20px;
+                    font-weight: 600;
+                    font-size: 13px;
+                    min-height: 20px;
+                }
+                QPushButton:hover {
+                    background-color: #0051d5;
+                }
+                QPushButton:pressed {
+                    background-color: #0040a8;
+                }
+                QPushButton:disabled {
+                    background-color: #c7c7cc;
+                    color: #8e8e93;
+                }
+                QComboBox {
+                    background-color: #ffffff;
+                    border: 2px solid #e5e5e7;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    min-height: 20px;
+                    font-size: 13px;
+                }
+                QComboBox:hover {
+                    border-color: #007aff;
+                }
+                QComboBox::drop-down {
+                    border: none;
+                    width: 30px;
+                }
+                QComboBox::down-arrow {
+                    image: none;
+                    border-left: 5px solid transparent;
+                    border-right: 5px solid transparent;
+                    border-top: 6px solid #1d1d1f;
+                    width: 0;
+                    height: 0;
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #ffffff;
+                    border: 2px solid #e5e5e7;
+                    border-radius: 8px;
+                    selection-background-color: #007aff;
+                    selection-color: white;
+                }
+                QCheckBox {
+                    font-size: 13px;
+                    spacing: 8px;
+                }
+                QCheckBox::indicator {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #c7c7cc;
+                    border-radius: 4px;
+                    background-color: #ffffff;
+                }
+                QCheckBox::indicator:hover {
+                    border-color: #007aff;
+                }
+                QCheckBox::indicator:checked {
+                    background-color: #007aff;
+                    border-color: #007aff;
+                    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOSIgdmlld0JveD0iMCAwIDEyIDkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDQuNUw0LjUgOEwxMSAxIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=);
+                }
+                QProgressBar {
+                    border: none;
+                    border-radius: 8px;
+                    background-color: #e5e5e7;
+                    height: 8px;
+                    text-align: center;
+                }
+                QProgressBar::chunk {
+                    background-color: #007aff;
+                    border-radius: 8px;
+                }
+                QTextEdit {
+                    background-color: #1d1d1f;
+                    color: #f5f5f7;
+                    border: 2px solid #e5e5e7;
+                    border-radius: 12px;
+                    padding: 12px;
+                    font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
+                    font-size: 12px;
+                }
+                QLabel {
+                    font-size: 13px;
+                }
+            )";
+        } else { // dark theme
+            styleSheet = R"(
+                QMainWindow {
+                    background-color: #1c1c1e;
+                }
+                QWidget {
+                    background-color: #1c1c1e;
+                    color: #f5f5f7;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                QGroupBox {
+                    font-weight: 600;
+                    font-size: 13px;
+                    color: #f5f5f7;
+                    border: 2px solid #38383a;
+                    border-radius: 12px;
+                    margin-top: 12px;
+                    padding-top: 12px;
+                    background-color: #2c2c2e;
+                }
+                QGroupBox::title {
+                    subcontrol-origin: margin;
+                    left: 16px;
+                    padding: 0 8px;
+                    background-color: #2c2c2e;
+                }
+                QPushButton {
+                    background-color: #0a84ff;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 10px 20px;
+                    font-weight: 600;
+                    font-size: 13px;
+                    min-height: 20px;
+                }
+                QPushButton:hover {
+                    background-color: #409cff;
+                }
+                QPushButton:pressed {
+                    background-color: #0051d5;
+                }
+                QPushButton:disabled {
+                    background-color: #3a3a3c;
+                    color: #636366;
+                }
+                QComboBox {
+                    background-color: #2c2c2e;
+                    border: 2px solid #38383a;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    min-height: 20px;
+                    font-size: 13px;
+                    color: #f5f5f7;
+                }
+                QComboBox:hover {
+                    border-color: #0a84ff;
+                }
+                QComboBox::drop-down {
+                    border: none;
+                    width: 30px;
+                }
+                QComboBox::down-arrow {
+                    image: none;
+                    border-left: 5px solid transparent;
+                    border-right: 5px solid transparent;
+                    border-top: 6px solid #f5f5f7;
+                    width: 0;
+                    height: 0;
+                }
+                QComboBox QAbstractItemView {
+                    background-color: #2c2c2e;
+                    border: 2px solid #38383a;
+                    border-radius: 8px;
+                    selection-background-color: #0a84ff;
+                    selection-color: white;
+                    color: #f5f5f7;
+                }
+                QCheckBox {
+                    font-size: 13px;
+                    spacing: 8px;
+                    color: #f5f5f7;
+                }
+                QCheckBox::indicator {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #636366;
+                    border-radius: 4px;
+                    background-color: #2c2c2e;
+                }
+                QCheckBox::indicator:hover {
+                    border-color: #0a84ff;
+                }
+                QCheckBox::indicator:checked {
+                    background-color: #0a84ff;
+                    border-color: #0a84ff;
+                    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOSIgdmlld0JveD0iMCAwIDEyIDkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDQuNUw0LjUgOEwxMSAxIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=);
+                }
+                QProgressBar {
+                    border: none;
+                    border-radius: 8px;
+                    background-color: #38383a;
+                    height: 8px;
+                    text-align: center;
+                }
+                QProgressBar::chunk {
+                    background-color: #0a84ff;
+                    border-radius: 8px;
+                }
+                QTextEdit {
+                    background-color: #000000;
+                    color: #f5f5f7;
+                    border: 2px solid #38383a;
+                    border-radius: 12px;
+                    padding: 12px;
+                    font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
+                    font-size: 12px;
+                }
+                QLabel {
+                    font-size: 13px;
+                }
+            )";
+        }
+        
+        qApp->setStyleSheet(styleSheet);
+        
+        // Update title styling
+        if (m_titleLabel) {
+            m_titleLabel->setStyleSheet(QString("font-size: 28px; font-weight: 700; color: %1;")
+                .arg(theme == "light" ? "#1d1d1f" : "#f5f5f7"));
+        }
+        if (m_subtitleLabel) {
+            m_subtitleLabel->setStyleSheet(QString("color: %1; font-size: 14px;")
+                .arg(theme == "light" ? "#86868b" : "#98989d"));
+        }
+        
+        // Update device status colors
+        if (m_deviceStatus) {
+            QString statusText = m_deviceStatus->text();
+            if (statusText == "Connected") {
+                m_deviceStatus->setStyleSheet("color: #34c759; font-weight: 600; font-size: 13px;");
+            } else {
+                m_deviceStatus->setStyleSheet("color: #ff9500; font-weight: 600; font-size: 13px;");
+            }
+        }
+        
+        // Update progress label
+        if (m_progressLabel) {
+            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 500;")
+                .arg(theme == "light" ? "#86868b" : "#98989d"));
+        }
+        
+        // Update console error colors
+        // This will be handled in onLogMessage
+        
+        // Update theme button border
+        if (m_themeBtn) {
+            QString borderColor = (theme == "light") ? "#e5e5e7" : "#38383a";
+            m_themeBtn->setStyleSheet(QString(R"(
+                QPushButton {
+                    background-color: transparent;
+                    border: 2px solid %1;
+                    border-radius: 8px;
+                    font-size: 18px;
+                    padding: 0;
+                }
+                QPushButton:hover {
+                    background-color: rgba(128, 128, 128, 0.2);
+                }
+            )").arg(borderColor));
+        }
+    }
+
     UsbWorker *m_worker;
     QLabel *m_deviceStatus;
+    QLabel *m_titleLabel;
+    QLabel *m_subtitleLabel;
+    QPushButton *m_themeBtn;
     QComboBox *m_sizeCombo;
     QCheckBox *m_noTrimCheck;
     QCheckBox *m_fullEraseCheck;
@@ -693,6 +1044,7 @@ private:
     QProgressBar *m_progressBar;
     QLabel *m_progressLabel;
     QTextEdit *m_console;
+    QString m_currentTheme;
 };
 
 int main(int argc, char *argv[]) {
