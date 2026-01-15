@@ -3,5 +3,6 @@ flashmd-gui
 flashmd-legacy
 flashmd-qt
 src/flashmd_core_qt.o
+src/moc_flashmd_qt.cpp
 original.bin
 dump.bin
