@@ -389,8 +389,8 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
         setWindowTitle("flashmd-thingy");
-        setMinimumSize(550, 790);
-        resize(550, 825);
+        setMinimumSize(550, 700);
+        resize(550, 700);
         m_currentTheme = getTheme();
 
         setupUi();
@@ -401,20 +401,6 @@ public:
     }
 
 private slots:
-    void onConnect() {
-        if (m_worker->isRunning()) return;
-        log("");
-        m_worker->setOperation(UsbWorker::OP_CONNECT);
-        startOperation();
-    }
-
-    void onCheckId() {
-        if (m_worker->isRunning()) return;
-        log("");
-        m_worker->setOperation(UsbWorker::OP_CHECK_ID);
-        startOperation();
-    }
-
     void onWriteRom() {
         if (m_worker->isRunning()) return;
 
@@ -570,10 +556,7 @@ private slots:
     void onOperationFinished(bool success, const QString &errorMsg) {
         setUiEnabled(true);
 
-        if (success) {
-            m_deviceStatus->setText("Connected");
-            m_deviceStatus->setStyleSheet("color: #34c759; font-weight: 600; font-size: 13px;");
-        } else if (!errorMsg.isEmpty()) {
+        if (!success && !errorMsg.isEmpty()) {
             log("Error: " + errorMsg);
         }
     }
@@ -620,27 +603,6 @@ private:
         titleLayout->addWidget(m_themeBtn);
         
         mainLayout->addLayout(titleLayout);
-
-        /* Device section */
-        QGroupBox *deviceGroup = new QGroupBox("Device");
-        QHBoxLayout *deviceLayout = new QHBoxLayout(deviceGroup);
-        deviceLayout->setSpacing(12);
-        deviceLayout->setContentsMargins(16, 20, 16, 16);
-
-        deviceLayout->addWidget(new QLabel("Status:"));
-        m_deviceStatus = new QLabel("Not Connected");
-        m_deviceStatus->setStyleSheet("color: #ff9500; font-weight: 600; font-size: 13px;");
-        deviceLayout->addWidget(m_deviceStatus);
-        deviceLayout->addStretch();
-
-        m_connectBtn = new QPushButton("Connect");
-        m_checkIdBtn = new QPushButton("Check ID");
-        connect(m_connectBtn, &QPushButton::clicked, this, &MainWindow::onConnect);
-        connect(m_checkIdBtn, &QPushButton::clicked, this, &MainWindow::onCheckId);
-        deviceLayout->addWidget(m_connectBtn);
-        deviceLayout->addWidget(m_checkIdBtn);
-
-        mainLayout->addWidget(deviceGroup);
 
         /* ROM Operations section */
         QGroupBox *romGroup = new QGroupBox("ROM Operations");
@@ -703,16 +665,22 @@ private:
         progressLayout->addWidget(m_progressLabel);
         mainLayout->addLayout(progressLayout);
 
+        /* Add stretch to push console to bottom */
+        mainLayout->addStretch(1);
+
         /* Console section */
-        QLabel *consoleLabel = new QLabel("Console Output:");
-        consoleLabel->setStyleSheet("font-weight: 600; font-size: 13px;");
-        mainLayout->addWidget(consoleLabel);
+        QGroupBox *consoleGroup = new QGroupBox("Console Output");
+        consoleGroup->setFixedHeight(160);
+        QVBoxLayout *consoleLayout = new QVBoxLayout(consoleGroup);
+        consoleLayout->setSpacing(0);
+        consoleLayout->setContentsMargins(16, 0, 16, 12);
 
         m_console = new QTextEdit();
         m_console->setReadOnly(true);
-        m_console->setMaximumHeight(120);
-        m_console->setMinimumHeight(100);
-        mainLayout->addWidget(m_console, 0);
+        m_console->setFixedHeight(108);
+        consoleLayout->addWidget(m_console);
+        
+        mainLayout->addWidget(consoleGroup, 0);
 
         /* Bottom buttons */
         QHBoxLayout *bottomLayout = new QHBoxLayout();
@@ -861,9 +829,9 @@ private:
                 QTextEdit {
                     background-color: #ffffff;
                     color: #1d1d1f;
-                    border: 2px solid #e5e5e7;
-                    border-radius: 12px;
-                    padding: 12px;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 8px;
                     font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
                     font-size: 12px;
                 }
@@ -989,9 +957,9 @@ private:
                 QTextEdit {
                     background-color: #000000;
                     color: #f5f5f7;
-                    border: 2px solid #38383a;
-                    border-radius: 12px;
-                    padding: 12px;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 8px;
                     font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
                     font-size: 12px;
                 }
@@ -1017,16 +985,6 @@ private:
         if (m_subtitleLabel) {
             m_subtitleLabel->setStyleSheet(QString("color: %1; font-size: 14px;")
                 .arg(theme == "light" ? "#86868b" : "#98989d"));
-        }
-        
-        // Update device status colors
-        if (m_deviceStatus) {
-            QString statusText = m_deviceStatus->text();
-            if (statusText == "Connected") {
-                m_deviceStatus->setStyleSheet("color: #34c759; font-weight: 600; font-size: 13px;");
-            } else {
-                m_deviceStatus->setStyleSheet("color: #ff9500; font-weight: 600; font-size: 13px;");
-            }
         }
         
         // Update progress label
@@ -1066,7 +1024,7 @@ private:
         QString writeGreen = (theme == "light") ? "#a8d5ba" : "#4a7c5e";
         QString readBlue = (theme == "light") ? "#a8c5d5" : "#4a6c7c";
         QString eraseRed = (theme == "light") ? "#d5a8a8" : "#7c4a4a";
-        QString deviceGray = (theme == "light") ? "#c7c7cc" : "#636366";
+        QString clearGray = (theme == "light") ? "#c7c7cc" : "#636366";
         QString buttonText = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
         
         QString baseStyle = QString(R"(
@@ -1106,24 +1064,15 @@ private:
         if (m_readSramBtn) {
             m_readSramBtn->setStyleSheet(baseStyle.arg(readBlue).arg(buttonText));
         }
-        if (m_connectBtn) {
-            m_connectBtn->setStyleSheet(baseStyle.arg(deviceGray).arg(buttonText));
-        }
-        if (m_checkIdBtn) {
-            m_checkIdBtn->setStyleSheet(baseStyle.arg(deviceGray).arg(buttonText));
-        }
         if (m_clearBtn) {
-            m_clearBtn->setStyleSheet(baseStyle.arg(deviceGray).arg(buttonText));
+            m_clearBtn->setStyleSheet(baseStyle.arg(clearGray).arg(buttonText));
         }
     }
 
     UsbWorker *m_worker;
-    QLabel *m_deviceStatus;
     QLabel *m_titleLabel;
     QLabel *m_subtitleLabel;
     QPushButton *m_themeBtn;
-    QPushButton *m_connectBtn;
-    QPushButton *m_checkIdBtn;
     QPushButton *m_writeRomBtn;
     QPushButton *m_readRomBtn;
     QPushButton *m_eraseBtn;
