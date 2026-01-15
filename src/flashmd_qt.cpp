@@ -29,6 +29,11 @@
 #include <QStyleFactory>
 
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <cstring>
 
 extern "C" {
 #include "flashmd_core.h"
@@ -37,6 +42,119 @@ extern "C" {
 /* Size options */
 static const uint32_t SIZE_VALUES[] = {0, 128, 256, 512, 1024, 2048, 4096};
 static const char* SIZE_LABELS[] = {"Auto", "128 KB", "256 KB", "512 KB", "1 MB", "2 MB", "4 MB"};
+
+/*
+ * IPC for privilege separation (Linux only)
+ * When run with sudo, we fork: parent (root) handles USB, child (user) runs GUI
+ */
+#ifdef __linux__
+
+enum IpcMsgType {
+    IPC_COMMAND = 1,
+    IPC_PROGRESS,
+    IPC_LOG,
+    IPC_RESULT,
+    IPC_QUIT
+};
+
+struct IpcCommand {
+    IpcMsgType type;
+    int operation;
+    char filepath[512];
+    uint32_t sizeKb;
+    int noTrim;
+    int verbose;
+    int fullErase;
+};
+
+struct IpcProgress {
+    IpcMsgType type;
+    uint32_t current;
+    uint32_t total;
+};
+
+struct IpcLog {
+    IpcMsgType type;
+    int isError;
+    char message[256];
+};
+
+struct IpcResult {
+    IpcMsgType type;
+    int result;
+};
+
+static int g_pipeToUsb[2] = {-1, -1};
+static int g_pipeToGui[2] = {-1, -1};
+static bool g_usingIpc = false;
+
+/* IPC callbacks for USB handler */
+static int g_ipcWriteFd = -1;
+
+static void ipcProgressCb(uint32_t current, uint32_t total, void *) {
+    if (g_ipcWriteFd < 0) return;
+    IpcProgress msg = {IPC_PROGRESS, current, total};
+    write(g_ipcWriteFd, &msg, sizeof(msg));
+}
+
+static void ipcMessageCb(const char *text, int isError, void *) {
+    if (g_ipcWriteFd < 0) return;
+    IpcLog msg = {IPC_LOG, isError, {}};
+    strncpy(msg.message, text, sizeof(msg.message) - 1);
+    write(g_ipcWriteFd, &msg, sizeof(msg));
+}
+
+/* USB handler loop - runs in root process */
+static void usbHandlerLoop(int readFd, int writeFd) {
+    g_ipcWriteFd = writeFd;
+    IpcCommand cmd;
+
+    while (true) {
+        ssize_t n = read(readFd, &cmd, sizeof(cmd));
+        if (n <= 0) break;
+        if (cmd.type == IPC_QUIT) break;
+        if (cmd.type != IPC_COMMAND) continue;
+
+        flashmd_config_t config;
+        flashmd_config_init(&config);
+        config.verbose = cmd.verbose;
+        config.no_trim = cmd.noTrim;
+        config.progress = ipcProgressCb;
+        config.message = ipcMessageCb;
+
+        flashmd_result_t result = flashmd_open();
+        if (result != FLASHMD_OK) {
+            IpcLog logMsg = {IPC_LOG, 1, {}};
+            snprintf(logMsg.message, sizeof(logMsg.message),
+                     "Could not open USB: %s", flashmd_error_string(result));
+            write(writeFd, &logMsg, sizeof(logMsg));
+            IpcResult resMsg = {IPC_RESULT, (int)result};
+            write(writeFd, &resMsg, sizeof(resMsg));
+            continue;
+        }
+
+        switch (cmd.operation) {
+            case 1: result = flashmd_connect(&config); break;
+            case 2: result = flashmd_check_id(&config); break;
+            case 3: {
+                uint32_t sz = cmd.fullErase ? 0 : (cmd.sizeKb ? cmd.sizeKb : 4096);
+                result = flashmd_erase(sz, &config);
+                break;
+            }
+            case 4: result = flashmd_read_rom(cmd.filepath, cmd.sizeKb, &config); break;
+            case 5: result = flashmd_write_rom(cmd.filepath, cmd.sizeKb, &config); break;
+            case 6: result = flashmd_read_sram(cmd.filepath, &config); break;
+            case 7: result = flashmd_write_sram(cmd.filepath, &config); break;
+        }
+        flashmd_close();
+
+        IpcResult resMsg = {IPC_RESULT, (int)result};
+        write(writeFd, &resMsg, sizeof(resMsg));
+    }
+    g_ipcWriteFd = -1;
+}
+
+#endif /* __linux__ */
 
 /*
  * Worker thread for USB operations
@@ -76,6 +194,16 @@ signals:
 
 protected:
     void run() override {
+#ifdef __linux__
+        if (g_usingIpc) {
+            runViaIpc();
+            return;
+        }
+#endif
+        runLocal();
+    }
+
+    void runLocal() {
         flashmd_config_t config;
         flashmd_config_init(&config);
         config.verbose = m_verbose;
@@ -133,6 +261,57 @@ protected:
         }
     }
 
+#ifdef __linux__
+    void runViaIpc() {
+        /* Send command to root USB handler */
+        IpcCommand cmd = {};
+        cmd.type = IPC_COMMAND;
+        cmd.operation = (int)m_operation;
+        strncpy(cmd.filepath, m_filepath.toUtf8().constData(), sizeof(cmd.filepath) - 1);
+        cmd.sizeKb = m_sizeKb;
+        cmd.noTrim = m_noTrim;
+        cmd.verbose = m_verbose;
+        cmd.fullErase = m_fullErase;
+
+        write(g_pipeToUsb[1], &cmd, sizeof(cmd));
+
+        /* Read responses until we get a result */
+        while (true) {
+            IpcMsgType msgType;
+            ssize_t n = read(g_pipeToGui[0], &msgType, sizeof(msgType));
+            if (n <= 0) {
+                emit operationFinished(false, "IPC error");
+                return;
+            }
+
+            if (msgType == IPC_PROGRESS) {
+                IpcProgress msg;
+                msg.type = msgType;
+                read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                emit progressChanged(msg.current, msg.total);
+            }
+            else if (msgType == IPC_LOG) {
+                IpcLog msg;
+                msg.type = msgType;
+                read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+                emit logMessage(QString::fromUtf8(msg.message), msg.isError != 0);
+            }
+            else if (msgType == IPC_RESULT) {
+                IpcResult msg;
+                msg.type = msgType;
+                read(g_pipeToGui[0], ((char*)&msg) + sizeof(msgType), sizeof(msg) - sizeof(msgType));
+
+                if (msg.result == FLASHMD_OK) {
+                    emit operationFinished(true, QString());
+                } else {
+                    emit operationFinished(false, QString(flashmd_error_string((flashmd_result_t)msg.result)));
+                }
+                return;
+            }
+        }
+    }
+#endif
+
 private:
     static void progressCallback(uint32_t current, uint32_t total, void *userData) {
         UsbWorker *worker = static_cast<UsbWorker*>(userData);
@@ -162,15 +341,6 @@ public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
         setWindowTitle("FlashMD - Sega Genesis ROM Flasher");
         setMinimumSize(500, 600);
-
-        /* Set up file ownership for created files */
-        const char *sudoUid = getenv("SUDO_UID");
-        const char *sudoGid = getenv("SUDO_GID");
-        if (sudoUid && sudoGid) {
-            flashmd_set_real_ids(atoi(sudoUid), atoi(sudoGid));
-        } else {
-            flashmd_set_real_ids(getuid(), getgid());
-        }
 
         setupUi();
         setupWorker();
@@ -454,13 +624,75 @@ private:
 };
 
 int main(int argc, char *argv[]) {
+    /* Set up file ownership for created files */
+    const char *sudoUid = getenv("SUDO_UID");
+    const char *sudoGid = getenv("SUDO_GID");
+    uid_t realUid = sudoUid ? (uid_t)atoi(sudoUid) : getuid();
+    gid_t realGid = sudoGid ? (gid_t)atoi(sudoGid) : getgid();
+
+#ifdef __linux__
+    /* Privilege separation: if running as root via sudo, fork */
+    if (getuid() == 0 && sudoUid && sudoGid) {
+        if (pipe(g_pipeToUsb) < 0 || pipe(g_pipeToGui) < 0) {
+            fprintf(stderr, "Failed to create pipes: %s\n", strerror(errno));
+            return 1;
+        }
+
+        pid_t pid = fork();
+        if (pid < 0) {
+            fprintf(stderr, "Failed to fork: %s\n", strerror(errno));
+            return 1;
+        }
+
+        if (pid > 0) {
+            /* Parent - stays root, handles USB */
+            close(g_pipeToUsb[1]);
+            close(g_pipeToGui[0]);
+            flashmd_set_real_ids(realUid, realGid);
+            usbHandlerLoop(g_pipeToUsb[0], g_pipeToGui[1]);
+            close(g_pipeToUsb[0]);
+            close(g_pipeToGui[1]);
+            waitpid(pid, NULL, 0);
+            return 0;
+        }
+
+        /* Child - drops privileges, runs GUI */
+        close(g_pipeToUsb[0]);
+        close(g_pipeToGui[1]);
+
+        if (setgid(realGid) < 0 || setuid(realUid) < 0) {
+            fprintf(stderr, "Failed to drop privileges: %s\n", strerror(errno));
+            _exit(1);
+        }
+
+        g_usingIpc = true;
+    } else {
+        flashmd_set_real_ids(realUid, realGid);
+    }
+#else
+    flashmd_set_real_ids(realUid, realGid);
+#endif
+
     QApplication app(argc, argv);
     app.setStyle(QStyleFactory::create("Fusion"));
 
     MainWindow window;
     window.show();
 
-    return app.exec();
+    int result = app.exec();
+
+#ifdef __linux__
+    /* Send quit to USB handler */
+    if (g_usingIpc) {
+        IpcCommand quit = {};
+        quit.type = IPC_QUIT;
+        write(g_pipeToUsb[1], &quit, sizeof(quit));
+        close(g_pipeToUsb[1]);
+        close(g_pipeToGui[0]);
+    }
+#endif
+
+    return result;
 }
 
 /* MOC generated file - must be at end */
