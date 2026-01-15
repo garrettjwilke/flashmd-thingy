@@ -754,6 +754,7 @@ flashmd_result_t flashmd_read_rom(const char *filename, uint32_t size_kb,
     emit_msg(config, 0, "ROM read complete: %u bytes written to %s\n", saved, filename);
 
     if (!config || !config->no_trim) {
+        emit_msg(config, 0, "Attempting to trim ROM file...\n");
         trim_rom_file(config, filename);
         fix_file_ownership(filename);
     } else if (size_kb > 0) {
