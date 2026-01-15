@@ -755,63 +755,73 @@ static char *portal_file_dialog(const char *title, const char *default_name,
 #endif /* HAVE_LIBPORTAL */
 
 static void open_rom_file_dialog(int for_save) {
+    const char *filters[] = {"*.bin", "*.md", "*.gen", "*.smd"};
+    char *allocated_result = NULL;
     const char *result = NULL;
 
 #ifdef HAVE_LIBPORTAL
-    const char *patterns[] = {"*.bin", "*.md", "*.gen", "*.smd"};
-    char *portal_result = portal_file_dialog(
+    /* Try portal first */
+    allocated_result = portal_file_dialog(
         for_save ? "Save ROM" : "Open ROM",
         for_save ? "dump.bin" : NULL,
-        "ROM Files", patterns, 4, for_save);
-    result = portal_result;
-#else
-    const char *filters[] = {"*.bin", "*.md", "*.gen", "*.smd"};
-    if (for_save) {
-        result = tinyfd_saveFileDialog("Save ROM", "dump.bin", 4, filters, "ROM Files");
-    } else {
-        result = tinyfd_openFileDialog("Open ROM", "", 4, filters, "ROM Files", 0);
-    }
+        "ROM Files", filters, 4, for_save);
+    result = allocated_result;
 #endif
+
+    /* Fall back to tinyfiledialogs if portal failed or unavailable */
+    if (!result) {
+        if (for_save) {
+            result = tinyfd_saveFileDialog("Save ROM", "dump.bin", 4, filters, "ROM Files");
+        } else {
+            result = tinyfd_openFileDialog("Open ROM", "", 4, filters, "ROM Files", 0);
+        }
+    }
 
     if (result) {
         strncpy(state.rom_filepath, result, sizeof(state.rom_filepath) - 1);
         state.rom_filepath[sizeof(state.rom_filepath) - 1] = '\0';
-#ifdef HAVE_LIBPORTAL
-        g_free((gpointer)result);
-#endif
     } else {
         state.rom_filepath[0] = '\0';
     }
+
+#ifdef HAVE_LIBPORTAL
+    if (allocated_result) g_free(allocated_result);
+#endif
 }
 
 static void open_sram_file_dialog(int for_save) {
+    const char *filters[] = {"*.srm", "*.sav", "*.bin"};
+    char *allocated_result = NULL;
     const char *result = NULL;
 
 #ifdef HAVE_LIBPORTAL
-    const char *patterns[] = {"*.srm", "*.sav", "*.bin"};
-    char *portal_result = portal_file_dialog(
+    /* Try portal first */
+    allocated_result = portal_file_dialog(
         for_save ? "Save SRAM" : "Open SRAM",
         for_save ? "save.srm" : NULL,
-        "SRAM Files", patterns, 3, for_save);
-    result = portal_result;
-#else
-    const char *filters[] = {"*.srm", "*.sav", "*.bin"};
-    if (for_save) {
-        result = tinyfd_saveFileDialog("Save SRAM", "save.srm", 3, filters, "SRAM Files");
-    } else {
-        result = tinyfd_openFileDialog("Open SRAM", "", 3, filters, "SRAM Files", 0);
-    }
+        "SRAM Files", filters, 3, for_save);
+    result = allocated_result;
 #endif
+
+    /* Fall back to tinyfiledialogs if portal failed or unavailable */
+    if (!result) {
+        if (for_save) {
+            result = tinyfd_saveFileDialog("Save SRAM", "save.srm", 3, filters, "SRAM Files");
+        } else {
+            result = tinyfd_openFileDialog("Open SRAM", "", 3, filters, "SRAM Files", 0);
+        }
+    }
 
     if (result) {
         strncpy(state.sram_filepath, result, sizeof(state.sram_filepath) - 1);
         state.sram_filepath[sizeof(state.sram_filepath) - 1] = '\0';
-#ifdef HAVE_LIBPORTAL
-        g_free((gpointer)result);
-#endif
     } else {
         state.sram_filepath[0] = '\0';
     }
+
+#ifdef HAVE_LIBPORTAL
+    if (allocated_result) g_free(allocated_result);
+#endif
 }
 
 /*
