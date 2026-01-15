@@ -27,6 +27,10 @@
 #include <QTimer>
 #include <QStyle>
 #include <QStyleFactory>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QDir>
+#include <QFileInfo>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -42,6 +46,31 @@ extern "C" {
 /* Size options */
 static const uint32_t SIZE_VALUES[] = {0, 128, 256, 512, 1024, 2048, 4096};
 static const char* SIZE_LABELS[] = {"Auto", "128 KB", "256 KB", "512 KB", "1 MB", "2 MB", "4 MB"};
+
+/*
+ * Configuration file management
+ * Stores paths in ~/.config/flashmd/config.ini
+ */
+static QString getConfigPath() {
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+    configDir += "/flashmd";
+    QDir dir;
+    if (!dir.exists(configDir)) {
+        dir.mkpath(configDir);
+    }
+    return configDir + "/config.ini";
+}
+
+static QString getSavedPath(const QString &key, const QString &defaultPath = QString()) {
+    QSettings settings(getConfigPath(), QSettings::IniFormat);
+    return settings.value(key, defaultPath).toString();
+}
+
+static void savePath(const QString &key, const QString &path) {
+    QSettings settings(getConfigPath(), QSettings::IniFormat);
+    settings.setValue(key, path);
+    settings.sync();
+}
 
 /*
  * IPC for privilege separation (Linux only)
@@ -366,9 +395,19 @@ private slots:
     void onWriteRom() {
         if (m_worker->isRunning()) return;
 
-        QString filepath = QFileDialog::getOpenFileName(this, "Open ROM File", QString(),
+        QString savedPath = getSavedPath("writeRomPath");
+        QString defaultPath;
+        if (!savedPath.isEmpty()) {
+            QFileInfo info(savedPath);
+            defaultPath = info.absolutePath();
+        }
+
+        QString filepath = QFileDialog::getOpenFileName(this, "Open ROM File", defaultPath,
             "ROM Files (*.bin *.md *.gen *.smd);;All Files (*)");
         if (filepath.isEmpty()) return;
+
+        // Save the selected path
+        savePath("writeRomPath", filepath);
 
         if (QMessageBox::question(this, "Confirm Write",
             "Are you sure you want to write this ROM?") != QMessageBox::Yes) return;
@@ -384,9 +423,21 @@ private slots:
     void onReadRom() {
         if (m_worker->isRunning()) return;
 
-        QString filepath = QFileDialog::getSaveFileName(this, "Save ROM File", "dump.bin",
+        QString savedPath = getSavedPath("readRomPath", "dump.bin");
+        QString defaultPath;
+        if (!savedPath.isEmpty()) {
+            QFileInfo info(savedPath);
+            defaultPath = info.absolutePath() + "/" + info.fileName();
+        } else {
+            defaultPath = "dump.bin";
+        }
+
+        QString filepath = QFileDialog::getSaveFileName(this, "Save ROM File", defaultPath,
             "ROM Files (*.bin *.md *.gen *.smd);;All Files (*)");
         if (filepath.isEmpty()) return;
+
+        // Save the selected path
+        savePath("readRomPath", filepath);
 
         if (QMessageBox::question(this, "Confirm Read",
             "Are you sure you want to read the ROM to this file?") != QMessageBox::Yes) return;
@@ -416,9 +467,21 @@ private slots:
     void onReadSram() {
         if (m_worker->isRunning()) return;
 
-        QString filepath = QFileDialog::getSaveFileName(this, "Save SRAM File", "save.srm",
+        QString savedPath = getSavedPath("readSramPath", "save.srm");
+        QString defaultPath;
+        if (!savedPath.isEmpty()) {
+            QFileInfo info(savedPath);
+            defaultPath = info.absolutePath() + "/" + info.fileName();
+        } else {
+            defaultPath = "save.srm";
+        }
+
+        QString filepath = QFileDialog::getSaveFileName(this, "Save SRAM File", defaultPath,
             "SRAM Files (*.srm *.sav *.bin);;All Files (*)");
         if (filepath.isEmpty()) return;
+
+        // Save the selected path
+        savePath("readSramPath", filepath);
 
         if (QMessageBox::question(this, "Confirm Read",
             "Are you sure you want to read SRAM?") != QMessageBox::Yes) return;
@@ -431,9 +494,19 @@ private slots:
     void onWriteSram() {
         if (m_worker->isRunning()) return;
 
-        QString filepath = QFileDialog::getOpenFileName(this, "Open SRAM File", QString(),
+        QString savedPath = getSavedPath("writeSramPath");
+        QString defaultPath;
+        if (!savedPath.isEmpty()) {
+            QFileInfo info(savedPath);
+            defaultPath = info.absolutePath();
+        }
+
+        QString filepath = QFileDialog::getOpenFileName(this, "Open SRAM File", defaultPath,
             "SRAM Files (*.srm *.sav *.bin);;All Files (*)");
         if (filepath.isEmpty()) return;
+
+        // Save the selected path
+        savePath("writeSramPath", filepath);
 
         if (QMessageBox::question(this, "Confirm Write",
             "Are you sure you want to write SRAM?") != QMessageBox::Yes) return;
