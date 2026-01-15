@@ -770,6 +770,236 @@ private:
 
     void setUiEnabled(bool enabled) {
         centralWidget()->setEnabled(enabled);
+        if (enabled) {
+            // Restore the original theme
+            applyTheme(m_currentTheme);
+        } else {
+            // Apply gray stylesheet for all UI elements
+            applyGrayStylesheet();
+        }
+    }
+
+    void applyGrayStylesheet() {
+        // Determine base colors based on current theme
+        bool isLight = (m_currentTheme == "light");
+        QString bgColor = isLight ? "#f5f5f7" : "#1c1c1e";
+        QString groupBg = isLight ? "#ffffff" : "#2c2c2e";
+        QString grayColor = "#808080";
+        QString grayDark = "#666666";
+        QString grayLight = "#999999";
+        QString textColor = isLight ? "#1d1d1f" : "#f5f5f7";
+        QString grayText = grayColor;
+        
+        QString grayStyleSheet = QString(R"(
+            QMainWindow {
+                background-color: %1;
+            }
+            QWidget {
+                background-color: %1;
+                color: %2;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }
+            QGroupBox {
+                font-weight: 600;
+                font-size: 13px;
+                color: %3;
+                border: 2px solid %4;
+                border-radius: 12px;
+                margin-top: 12px;
+                padding-top: 12px;
+                background-color: %5;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 16px;
+                padding: 0 8px;
+                background-color: %5;
+                color: %3;
+            }
+            QPushButton {
+                background-color: %4 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 13px;
+                min-height: 20px;
+            }
+            QPushButton:hover {
+                background-color: %4 !important;
+            }
+            QPushButton:pressed {
+                background-color: %4 !important;
+            }
+            QPushButton:disabled {
+                background-color: %4 !important;
+                color: white !important;
+            }
+            QComboBox {
+                background-color: %4 !important;
+                border: 2px solid %4 !important;
+                border-radius: 8px;
+                padding: 8px 12px;
+                min-height: 20px;
+                font-size: 13px;
+                color: white !important;
+            }
+            QComboBox:hover {
+                border-color: %4 !important;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 30px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid white;
+                width: 0;
+                height: 0;
+            }
+            QComboBox QAbstractItemView {
+                background-color: %4 !important;
+                border: 2px solid %4 !important;
+                border-radius: 8px;
+                selection-background-color: %4 !important;
+                selection-color: white !important;
+                color: white !important;
+            }
+            QCheckBox {
+                font-size: 13px;
+                spacing: 8px;
+                color: %3 !important;
+            }
+            QCheckBox::indicator {
+                width: 20px;
+                height: 20px;
+                border: 2px solid %4 !important;
+                border-radius: 4px;
+                background-color: %4 !important;
+            }
+            QCheckBox::indicator:hover {
+                border-color: %4 !important;
+            }
+            QCheckBox::indicator:checked {
+                background-color: %4 !important;
+                border-color: %4 !important;
+            }
+            QProgressBar {
+                border: none;
+                border-radius: 8px;
+                background-color: %6;
+                height: 8px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: %4;
+                border-radius: 8px;
+            }
+            QTextEdit {
+                background-color: %7;
+                color: %2;
+                border: none;
+                border-radius: 8px;
+                padding: 8px;
+                font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
+                font-size: 12px;
+            }
+            QLabel {
+                font-size: 13px;
+                color: %3 !important;
+            }
+            QGroupBox QLabel {
+                background-color: transparent;
+                color: %3 !important;
+            }
+            QGroupBox QCheckBox {
+                background-color: transparent;
+                color: %3 !important;
+            }
+        )").arg(bgColor).arg(textColor).arg(grayText).arg(grayColor)
+          .arg(groupBg).arg(isLight ? "#e5e5e7" : "#38383a")
+          .arg(isLight ? "#ffffff" : "#000000");
+        
+        qApp->setStyleSheet(grayStyleSheet);
+        
+        // Update title and subtitle to gray
+        if (m_titleLabel) {
+            m_titleLabel->setStyleSheet(QString("font-size: 28px; font-weight: 700; color: %1;")
+                .arg(grayText));
+        }
+        if (m_subtitleLabel) {
+            m_subtitleLabel->setStyleSheet(QString("color: %1; font-size: 14px;")
+                .arg(grayText));
+        }
+        
+        // Update progress label to gray
+        if (m_progressLabel) {
+            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 500;")
+                .arg(grayText));
+        }
+        
+        // Update theme button to gray
+        if (m_themeBtn) {
+            m_themeBtn->setStyleSheet(QString(R"(
+                QPushButton {
+                    background-color: transparent;
+                    border: 2px solid %1;
+                    border-radius: 8px;
+                    font-size: 20px;
+                    padding: 0;
+                    color: %1;
+                }
+                QPushButton:hover {
+                    background-color: rgba(128, 128, 128, 0.2);
+                }
+            )").arg(grayColor));
+        }
+        
+        // Explicitly set ALL buttons to gray (they have individual stylesheets that override global)
+        QString grayButtonStyle = QString(R"(
+            QPushButton {
+                background-color: %1 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 13px;
+                min-height: 20px;
+            }
+            QPushButton:hover {
+                background-color: %1 !important;
+            }
+            QPushButton:pressed {
+                background-color: %1 !important;
+            }
+            QPushButton:disabled {
+                background-color: %1 !important;
+                color: white !important;
+            }
+        )").arg(grayColor);
+        
+        if (m_writeRomBtn) {
+            m_writeRomBtn->setStyleSheet(grayButtonStyle);
+        }
+        if (m_readRomBtn) {
+            m_readRomBtn->setStyleSheet(grayButtonStyle);
+        }
+        if (m_eraseBtn) {
+            m_eraseBtn->setStyleSheet(grayButtonStyle);
+        }
+        if (m_writeSramBtn) {
+            m_writeSramBtn->setStyleSheet(grayButtonStyle);
+        }
+        if (m_readSramBtn) {
+            m_readSramBtn->setStyleSheet(grayButtonStyle);
+        }
+        if (m_clearBtn) {
+            m_clearBtn->setStyleSheet(grayButtonStyle);
+        }
     }
 
     void log(const QString &message) {
