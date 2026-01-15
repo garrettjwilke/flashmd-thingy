@@ -28,6 +28,16 @@ ifeq ($(UNAME_S),Darwin)
 endif
 ifeq ($(UNAME_S),Linux)
     LDFLAGS_RAYLIB += -lGL -lm -lpthread -ldl -lrt -lX11
+
+    # Check for libportal (native file dialogs on Linux)
+    HAVE_PORTAL := $(shell pkg-config --exists libportal 2>/dev/null && echo 1 || echo 0)
+    ifeq ($(HAVE_PORTAL),1)
+        CFLAGS_PORTAL = $(shell pkg-config --cflags libportal) -DHAVE_LIBPORTAL
+        LDFLAGS_PORTAL = $(shell pkg-config --libs libportal)
+    else
+        CFLAGS_PORTAL =
+        LDFLAGS_PORTAL =
+    endif
 endif
 
 # Source files
@@ -74,7 +84,7 @@ $(GUI_TARGET): $(CORE_SRC) $(GUI_SRC) $(RAYLIB_LIB)
 else
 $(GUI_TARGET): $(CORE_SRC) $(GUI_SRC)
 endif
-	$(CC) $(CFLAGS) $(CFLAGS_USB) $(CFLAGS_RAYLIB) $(INCLUDES) -o $@ $(CORE_SRC) $(GUI_SRC) $(LDFLAGS_USB) $(LDFLAGS_RAYLIB) -lpthread
+	$(CC) $(CFLAGS) $(CFLAGS_USB) $(CFLAGS_RAYLIB) $(CFLAGS_PORTAL) $(INCLUDES) -o $@ $(CORE_SRC) $(GUI_SRC) $(LDFLAGS_USB) $(LDFLAGS_RAYLIB) $(LDFLAGS_PORTAL) -lpthread
 
 # Legacy single-file build (original main.c)
 legacy: $(LEGACY_TARGET)

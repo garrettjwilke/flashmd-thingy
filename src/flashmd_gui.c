@@ -23,6 +23,10 @@
 
 #include <raylib.h>
 
+#ifdef HAVE_LIBPORTAL
+#include <libportal/portal.h>
+#endif
+
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
@@ -621,37 +625,172 @@ static void start_operation(operation_t op) {
 /*
  * File dialog helpers
  */
-static void open_rom_file_dialog(int for_save) {
-    const char *filters[] = {"*.bin", "*.md", "*.gen", "*.smd"};
-    const char *result;
 
+#ifdef HAVE_LIBPORTAL
+/*
+ * Portal-based native file dialogs for Linux
+ */
+typedef struct {
+    char *result_path;
+    gboolean done;
+    GMainLoop *loop;
+} PortalDialogData;
+
+static void portal_open_cb(GObject *source, GAsyncResult *result, gpointer user_data) {
+    PortalDialogData *data = user_data;
+    XdpPortal *portal = XDP_PORTAL(source);
+    GError *error = NULL;
+
+    GVariant *res = xdp_portal_open_file_finish(portal, result, &error);
+    if (error) {
+        g_error_free(error);
+        data->result_path = NULL;
+    } else if (res) {
+        GVariant *uris_v = g_variant_lookup_value(res, "uris", G_VARIANT_TYPE_STRING_ARRAY);
+        if (uris_v) {
+            gsize n_uris;
+            const gchar **uris = g_variant_get_strv(uris_v, &n_uris);
+            if (n_uris > 0 && uris[0]) {
+                /* Convert file:// URI to path */
+                GFile *file = g_file_new_for_uri(uris[0]);
+                data->result_path = g_file_get_path(file);
+                g_object_unref(file);
+            }
+            g_free(uris);
+            g_variant_unref(uris_v);
+        }
+        g_variant_unref(res);
+    }
+
+    data->done = TRUE;
+    g_main_loop_quit(data->loop);
+}
+
+static void portal_save_cb(GObject *source, GAsyncResult *result, gpointer user_data) {
+    PortalDialogData *data = user_data;
+    XdpPortal *portal = XDP_PORTAL(source);
+    GError *error = NULL;
+
+    GVariant *res = xdp_portal_save_file_finish(portal, result, &error);
+    if (error) {
+        g_error_free(error);
+        data->result_path = NULL;
+    } else if (res) {
+        GVariant *uris_v = g_variant_lookup_value(res, "uris", G_VARIANT_TYPE_STRING_ARRAY);
+        if (uris_v) {
+            gsize n_uris;
+            const gchar **uris = g_variant_get_strv(uris_v, &n_uris);
+            if (n_uris > 0 && uris[0]) {
+                GFile *file = g_file_new_for_uri(uris[0]);
+                data->result_path = g_file_get_path(file);
+                g_object_unref(file);
+            }
+            g_free(uris);
+            g_variant_unref(uris_v);
+        }
+        g_variant_unref(res);
+    }
+
+    data->done = TRUE;
+    g_main_loop_quit(data->loop);
+}
+
+static char *portal_file_dialog(const char *title, const char *default_name,
+                                 const char *filter_name, const char **patterns,
+                                 int pattern_count, int for_save) {
+    XdpPortal *portal = xdp_portal_new();
+    if (!portal) return NULL;
+
+    PortalDialogData data = {0};
+    data.loop = g_main_loop_new(NULL, FALSE);
+
+    /* Build filter */
+    GVariantBuilder filter_builder;
+    g_variant_builder_init(&filter_builder, G_VARIANT_TYPE("a(sa(us))"));
+
+    GVariantBuilder patterns_builder;
+    g_variant_builder_init(&patterns_builder, G_VARIANT_TYPE("a(us)"));
+    for (int i = 0; i < pattern_count; i++) {
+        g_variant_builder_add(&patterns_builder, "(us)", 0, patterns[i]);
+    }
+    g_variant_builder_add(&filter_builder, "(s@a(us))", filter_name,
+                          g_variant_builder_end(&patterns_builder));
+
+    GVariant *filters = g_variant_builder_end(&filter_builder);
+
+    if (for_save) {
+        xdp_portal_save_file(portal, NULL, title, default_name ? default_name : "",
+                             NULL, NULL, filters, NULL, NULL,
+                             XDP_SAVE_FILE_FLAG_NONE, NULL, portal_save_cb, &data);
+    } else {
+        xdp_portal_open_file(portal, NULL, title, filters, NULL, NULL,
+                             XDP_OPEN_FILE_FLAG_NONE, NULL, portal_open_cb, &data);
+    }
+
+    /* Run loop until dialog closes */
+    g_main_loop_run(data.loop);
+    g_main_loop_unref(data.loop);
+    g_object_unref(portal);
+
+    return data.result_path;
+}
+#endif /* HAVE_LIBPORTAL */
+
+static void open_rom_file_dialog(int for_save) {
+    const char *result = NULL;
+
+#ifdef HAVE_LIBPORTAL
+    const char *patterns[] = {"*.bin", "*.md", "*.gen", "*.smd"};
+    char *portal_result = portal_file_dialog(
+        for_save ? "Save ROM" : "Open ROM",
+        for_save ? "dump.bin" : NULL,
+        "ROM Files", patterns, 4, for_save);
+    result = portal_result;
+#else
+    const char *filters[] = {"*.bin", "*.md", "*.gen", "*.smd"};
     if (for_save) {
         result = tinyfd_saveFileDialog("Save ROM", "dump.bin", 4, filters, "ROM Files");
     } else {
         result = tinyfd_openFileDialog("Open ROM", "", 4, filters, "ROM Files", 0);
     }
+#endif
 
     if (result) {
         strncpy(state.rom_filepath, result, sizeof(state.rom_filepath) - 1);
         state.rom_filepath[sizeof(state.rom_filepath) - 1] = '\0';
+#ifdef HAVE_LIBPORTAL
+        g_free((gpointer)result);
+#endif
     } else {
         state.rom_filepath[0] = '\0';
     }
 }
 
 static void open_sram_file_dialog(int for_save) {
-    const char *filters[] = {"*.srm", "*.sav", "*.bin"};
-    const char *result;
+    const char *result = NULL;
 
+#ifdef HAVE_LIBPORTAL
+    const char *patterns[] = {"*.srm", "*.sav", "*.bin"};
+    char *portal_result = portal_file_dialog(
+        for_save ? "Save SRAM" : "Open SRAM",
+        for_save ? "save.srm" : NULL,
+        "SRAM Files", patterns, 3, for_save);
+    result = portal_result;
+#else
+    const char *filters[] = {"*.srm", "*.sav", "*.bin"};
     if (for_save) {
         result = tinyfd_saveFileDialog("Save SRAM", "save.srm", 3, filters, "SRAM Files");
     } else {
         result = tinyfd_openFileDialog("Open SRAM", "", 3, filters, "SRAM Files", 0);
     }
+#endif
 
     if (result) {
         strncpy(state.sram_filepath, result, sizeof(state.sram_filepath) - 1);
         state.sram_filepath[sizeof(state.sram_filepath) - 1] = '\0';
+#ifdef HAVE_LIBPORTAL
+        g_free((gpointer)result);
+#endif
     } else {
         state.sram_filepath[0] = '\0';
     }
