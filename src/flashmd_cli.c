@@ -18,7 +18,7 @@ static void sigint_handler(int sig) {
 }
 
 static void print_usage(const char *progname) {
-    printf("FlashMaster MD - Host Tool (libusb version)\n\n");
+    printf("flashmd thingy\n\n");
     printf("Usage:\n");
     printf("  %s [options] <command>\n\n", progname);
     printf("Options:\n");

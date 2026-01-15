@@ -339,14 +339,13 @@ class MainWindow : public QMainWindow {
 
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
-        setWindowTitle("FlashMD - Sega Genesis ROM Flasher");
+        setWindowTitle("flashmd-thingy");
         setMinimumSize(500, 600);
 
         setupUi();
         setupWorker();
 
-        log("FlashMD GUI - Ready");
-        log("Connect your FlashMaster MD device and click Connect.");
+        log("flashmd-thingy");
     }
 
 private slots:
@@ -482,7 +481,7 @@ private:
         mainLayout->setSpacing(10);
 
         /* Title */
-        QLabel *title = new QLabel("FlashMD");
+        QLabel *title = new QLabel("flashmd-thingy");
         title->setStyleSheet("font-size: 20px; font-weight: bold;");
         QLabel *subtitle = new QLabel("Sega Genesis ROM Flasher");
         subtitle->setStyleSheet("color: gray;");
