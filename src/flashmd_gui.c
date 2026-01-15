@@ -698,6 +698,24 @@ static void portal_save_cb(GObject *source, GAsyncResult *result, gpointer user_
 static char *portal_file_dialog(const char *title, const char *default_name,
                                  const char *filter_name, const char **patterns,
                                  int pattern_count, int for_save) {
+    /* Ensure XDG_RUNTIME_DIR is set (needed for D-Bus on Linux) */
+    if (!getenv("XDG_RUNTIME_DIR")) {
+        char runtime_path[128];
+        snprintf(runtime_path, sizeof(runtime_path), "/run/user/%d", getuid());
+        setenv("XDG_RUNTIME_DIR", runtime_path, 0);
+    }
+
+    /* Check if D-Bus session is available */
+    if (!getenv("DBUS_SESSION_BUS_ADDRESS")) {
+        /* Try to get it from user's runtime dir */
+        const char *runtime_dir = getenv("XDG_RUNTIME_DIR");
+        if (runtime_dir) {
+            char bus_path[512];
+            snprintf(bus_path, sizeof(bus_path), "unix:path=%s/bus", runtime_dir);
+            setenv("DBUS_SESSION_BUS_ADDRESS", bus_path, 0);
+        }
+    }
+
     XdpPortal *portal = xdp_portal_new();
     if (!portal) return NULL;
 
