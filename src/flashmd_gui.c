@@ -502,21 +502,23 @@ static bool draw_checkbox(Rectangle bounds, const char *label, bool *checked, bo
  * Helper: Draw dropdown
  */
 static bool draw_dropdown(Rectangle bounds, const char **options, int option_count,
-                          int *selected, bool *active) {
-    bool hover = CheckCollisionPointRec(GetMousePosition(), bounds);
+                          int *selected, bool *active, bool disabled) {
+    bool hover = !disabled && CheckCollisionPointRec(GetMousePosition(), bounds);
     bool clicked = hover && IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
     bool changed = false;
 
     /* Draw main button */
-    Color bg = hover ? current_theme->button_hover : current_theme->input_bg;
+    Color bg = disabled ? ColorBrightness(current_theme->input_bg, -0.2f) :
+               hover ? current_theme->button_hover : current_theme->input_bg;
     DrawRectangleRounded(bounds, 0.15f, 4, bg);
     DrawRectangleRoundedLinesEx(bounds, 0.15f, 4, 1, current_theme->panel_border);
 
     /* Draw selected text */
     if (*selected >= 0 && *selected < option_count) {
+        Color text_color = disabled ? current_theme->text_muted : current_theme->text_primary;
         draw_text(options[*selected], (int)bounds.x + 8,
                   (int)(bounds.y + (bounds.height - FONT_SIZE) / 2),
-                  FONT_SIZE, current_theme->text_primary);
+                  FONT_SIZE, text_color);
     }
 
     /* Draw arrow */
@@ -526,7 +528,7 @@ static bool draw_dropdown(Rectangle bounds, const char **options, int option_cou
         (Vector2){(float)arrow_x, (float)(arrow_y - 4)},
         (Vector2){(float)(arrow_x + 10), (float)(arrow_y - 4)},
         (Vector2){(float)(arrow_x + 5), (float)(arrow_y + 4)},
-        current_theme->text_muted);
+        disabled ? ColorBrightness(current_theme->text_muted, -0.3f) : current_theme->text_muted);
 
     if (clicked) {
         *active = !(*active);
@@ -650,13 +652,13 @@ int main(void) {
         Color status_color = state.device_connected ? current_theme->success : current_theme->warning;
         draw_text(status, margin + 90, y + 18, FONT_SIZE, status_color);
 
-        if (draw_button((Rectangle){(float)(width - 195), (float)(y + 12), 90, 32}, "Connect", false)) {
+        if (draw_button((Rectangle){(float)(width - 195), (float)(y + 12), 90, 32}, "Connect", state.operation_running)) {
             if (!running) {
                 console_add_line("");
                 start_operation(OP_CONNECT);
             }
         }
-        if (draw_button((Rectangle){(float)(width - 95), (float)(y + 12), 85, 32}, "Check ID", false)) {
+        if (draw_button((Rectangle){(float)(width - 95), (float)(y + 12), 85, 32}, "Check ID", state.operation_running)) {
             if (!running) {
                 console_add_line("");
                 start_operation(OP_CHECK_ID);
@@ -688,159 +690,159 @@ int main(void) {
 
         
 
-                        /* ROM action buttons row 1 */
+                                        /* ROM action buttons row 1 */
 
         
 
-                        if (draw_button((Rectangle){(float)(margin + 14), (float)y, 110, 34}, "Write ROM", state.size_dropdown_active)) {
+                                        if (draw_button((Rectangle){(float)(margin + 14), (float)y, 110, 34}, "Write ROM", running || state.size_dropdown_active)) {
 
         
 
-                            if (!running) {
+                                            if (!running) {
 
         
 
-                                open_rom_file_dialog(0);
+                                                open_rom_file_dialog(0);
 
         
 
-                                if (state.rom_filepath[0]) {
+                                                if (state.rom_filepath[0]) {
 
         
 
-                                    int confirm = tinyfd_messageBox("Confirm Write", "Are you sure you want to write this ROM?", "yesno", "question", 0);
+                                                    int confirm = tinyfd_messageBox("Confirm Write", "Are you sure you want to write this ROM?", "yesno", "question", 0);
 
         
 
-                                    if (confirm) {
+                                                    if (confirm) {
 
         
 
-                                        console_add_line("");
+                                                        console_add_line("");
 
         
 
-                                        start_operation(OP_WRITE_ROM);
+                                                        start_operation(OP_WRITE_ROM);
 
         
 
-                                    }
+                                                    }
 
         
 
-                                }
+                                                }
 
         
 
-                            }
+                                            }
 
         
 
-                        }
+                                        }
 
         
 
-                        if (draw_button((Rectangle){(float)(margin + 132), (float)y, 110, 34}, "Read ROM", state.size_dropdown_active)) {
+                                        if (draw_button((Rectangle){(float)(margin + 132), (float)y, 110, 34}, "Read ROM", running || state.size_dropdown_active)) {
 
         
 
-                            if (!running) {
+                                            if (!running) {
 
         
 
-                                open_rom_file_dialog(1);
+                                                open_rom_file_dialog(1);
 
         
 
-                                if (state.rom_filepath[0]) {
+                                                if (state.rom_filepath[0]) {
 
         
 
-                                    int confirm = tinyfd_messageBox("Confirm Read", "Are you sure you want to read the ROM to this file?", "yesno", "question", 0);
+                                                    int confirm = tinyfd_messageBox("Confirm Read", "Are you sure you want to read the ROM to this file?", "yesno", "question", 0);
 
         
 
-                                    if (confirm) {
+                                                    if (confirm) {
 
         
 
-                                        console_add_line("");
+                                                        console_add_line("");
 
         
 
-                                        start_operation(OP_READ_ROM);
+                                                        start_operation(OP_READ_ROM);
 
         
 
-                                    }
+                                                    }
 
         
 
-                                }
+                                                }
 
         
 
-                            }
+                                            }
 
         
 
-                        }
+                                        }
 
         
 
-                        draw_checkbox((Rectangle){(float)(margin + 250), (float)(y + 7), 22, 22}, "No trim", &state.no_trim, state.size_dropdown_active);
+                                        draw_checkbox((Rectangle){(float)(margin + 250), (float)(y + 7), 22, 22}, "No trim", &state.no_trim, running || state.size_dropdown_active);
 
         
 
-                        y += row_height + 12;
+                                        y += row_height + 12;
 
         
 
-                
+                                
 
         
 
-                        /* ROM action buttons row 2 */
+                                        /* ROM action buttons row 2 */
 
         
 
-                        if (draw_button((Rectangle){(float)(margin + 14), (float)y, 110, 34}, "Erase", state.size_dropdown_active)) {
+                                        if (draw_button((Rectangle){(float)(margin + 14), (float)y, 110, 34}, "Erase", running || state.size_dropdown_active)) {
 
         
 
-                            if (!running) {
+                                            if (!running) {
 
         
 
-                                int confirm = tinyfd_messageBox("Confirm Erase", "Are you sure you want to erase the flash memory?", "yesno", "question", 0);
+                                                int confirm = tinyfd_messageBox("Confirm Erase", "Are you sure you want to erase the flash memory?", "yesno", "question", 0);
 
         
 
-                                if (confirm) {
+                                                if (confirm) {
 
         
 
-                                    console_add_line("");
+                                                    console_add_line("");
 
         
 
-                                    start_operation(OP_ERASE);
+                                                    start_operation(OP_ERASE);
 
         
 
-                                }
+                                                }
 
         
 
-                            }
+                                            }
 
         
 
-                        }
+                                        }
 
         
 
-                        draw_checkbox((Rectangle){(float)(margin + 132), (float)(y + 7), 22, 22}, "Full Erase", &state.full_erase, state.size_dropdown_active);
+                                        draw_checkbox((Rectangle){(float)(margin + 132), (float)(y + 7), 22, 22}, "Full Erase", &state.full_erase, running || state.size_dropdown_active);
 
         
 
@@ -865,103 +867,199 @@ int main(void) {
         
 
 
-                /* SRAM file path row */
+                        /* SRAM file path row */
 
 
-                draw_text("File:", margin + 14, y + 8, FONT_SIZE, current_theme->text_primary);
+        
 
 
-                draw_input_field((Rectangle){(float)(margin + 60), (float)(y + 2), (float)(width - 180), 32},
+                        draw_text("File:", margin + 14, y + 8, FONT_SIZE, current_theme->text_primary);
 
 
-                                 state.sram_filepath, "(no file selected)");
+        
 
 
-                                if (draw_button((Rectangle){(float)(width - 100), (float)(y + 2), 90, 32}, "Browse", state.size_dropdown_active)) {
+                        draw_input_field((Rectangle){(float)(margin + 60), (float)(y + 2), (float)(width - 180), 32},
 
 
-                                    if (!running) open_sram_file_dialog(0);
+        
 
 
-                                }
+                                         state.sram_filepath, "(no file selected)");
 
 
-                                y += row_height + 2;
+        
 
 
-                        
+                        if (draw_button((Rectangle){(float)(width - 100), (float)(y + 2), 90, 32}, "Browse", running || state.size_dropdown_active)) {
 
 
-                                /* SRAM action buttons row */
+        
 
 
-                                if (draw_button((Rectangle){(float)(margin + 14), (float)y, 105, 34}, "Read SRAM", state.size_dropdown_active)) {
+                            if (!running) open_sram_file_dialog(0);
 
 
-                                    if (!running) {
+        
 
 
-                                        open_sram_file_dialog(1);
+                        }
 
 
-                                        if (state.sram_filepath[0]) {
+        
 
 
-                                            int confirm = tinyfd_messageBox("Confirm Read", "Are you sure you want to read SRAM?", "yesno", "question", 0);
+                        y += row_height + 2;
 
 
-                                            if (confirm) {
+        
 
 
-                                                console_add_line("");
+                
 
 
-                                                start_operation(OP_READ_SRAM);
+        
 
 
-                                            }
+                        /* SRAM action buttons row */
 
 
-                                        }
+        
+
+
+                        if (draw_button((Rectangle){(float)(margin + 14), (float)y, 105, 34}, "Read SRAM", running || state.size_dropdown_active)) {
+
+
+        
+
+
+                            if (!running) {
+
+
+        
+
+
+                                open_sram_file_dialog(1);
+
+
+        
+
+
+                                if (state.sram_filepath[0]) {
+
+
+        
+
+
+                                    int confirm = tinyfd_messageBox("Confirm Read", "Are you sure you want to read SRAM?", "yesno", "question", 0);
+
+
+        
+
+
+                                    if (confirm) {
+
+
+        
+
+
+                                        console_add_line("");
+
+
+        
+
+
+                                        start_operation(OP_READ_SRAM);
+
+
+        
 
 
                                     }
 
 
-                                }
-
-
-                                if (draw_button((Rectangle){(float)(margin + 127), (float)y, 105, 34}, "Write SRAM", state.size_dropdown_active)) {
-
-
-                                    if (!running && state.sram_filepath[0]) {
-
-
-                                        int confirm = tinyfd_messageBox("Confirm Write", "Are you sure you want to write SRAM?", "yesno", "question", 0);
-
-
-                                        if (confirm) {
-
-
-                                            console_add_line("");
-
-
-                                            start_operation(OP_WRITE_SRAM);
-
-
-                                        }
-
-
-                                    } else if (!state.sram_filepath[0]) {
-
-
-                                        console_add_line("Please select an SRAM file first");
-
-
-                                    }
+        
 
 
                                 }
+
+
+        
+
+
+                            }
+
+
+        
+
+
+                        }
+
+
+        
+
+
+                        if (draw_button((Rectangle){(float)(margin + 127), (float)y, 105, 34}, "Write SRAM", running || state.size_dropdown_active)) {
+
+
+        
+
+
+                            if (!running && state.sram_filepath[0]) {
+
+
+        
+
+
+                                int confirm = tinyfd_messageBox("Confirm Write", "Are you sure you want to write SRAM?", "yesno", "question", 0);
+
+
+        
+
+
+                                if (confirm) {
+
+
+        
+
+
+                                    console_add_line("");
+
+
+        
+
+
+                                    start_operation(OP_WRITE_SRAM);
+
+
+        
+
+
+                                }
+
+
+        
+
+
+                            } else if (!state.sram_filepath[0]) {
+
+
+        
+
+
+                                console_add_line("Please select an SRAM file first");
+
+
+        
+
+
+                            }
+
+
+        
+
+
+                        }
 
 
                 y += row_height + 20;
@@ -1063,34 +1161,115 @@ int main(void) {
         
 
 
-                                        draw_checkbox((Rectangle){(float)(width - 90), (float)(y + 6), 22, 22}, "Verbose", &state.verbose_mode, state.size_dropdown_active);
+                                                draw_checkbox((Rectangle){(float)(width - 90), (float)(y + 6), 22, 22}, "Verbose", &state.verbose_mode, running || state.size_dropdown_active);
 
 
         
 
 
-                if (running) {
-
-
-                    draw_text("Working...", width / 2 - 45, y + 8, FONT_SIZE, current_theme->warning);
-
-
-                }
+                                
 
 
         
 
 
-                /* ===== Draw dropdown LAST so it appears on top ===== */
-
-
-                draw_dropdown(dropdown_bounds, size_opts, size_opt_count, &state.rom_size_index, &state.size_dropdown_active);
+                                        
 
 
         
 
 
-                EndDrawing();
+                                
+
+
+        
+
+
+                                                if (running) {
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                                    draw_text("Working...", width / 2 - 45, y + 8, FONT_SIZE, current_theme->warning);
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                                }
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                        
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                                /* ===== Draw dropdown LAST so it appears on top ===== */
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                                draw_dropdown(dropdown_bounds, size_opts, size_opt_count, &state.rom_size_index, &state.size_dropdown_active, running);
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                        
+
+
+        
+
+
+                                
+
+
+        
+
+
+                                                EndDrawing();
 
 
             }
