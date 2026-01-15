@@ -37,6 +37,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pwd.h>
 #include <cstring>
 
 extern "C" {
@@ -51,9 +52,49 @@ static const char* SIZE_LABELS[] = {"Auto", "128 KB", "256 KB", "512 KB", "1 MB"
  * Configuration file management
  * Stores paths in ~/.config/flashmd/config.ini
  */
+static QString getRealUserHome() {
+    // Get the real user's home directory (not root's if running via sudo)
+    const char *homeDir = getenv("HOME");
+    
+    // If HOME is set to /root, we're probably running as root via sudo
+    // In that case, use SUDO_UID to get the real user's home
+    if (homeDir && strcmp(homeDir, "/root") == 0) {
+        homeDir = nullptr; // Force lookup via SUDO_UID
+    }
+    
+    if (!homeDir) {
+        // Get home from passwd using real UID
+        const char *sudoUid = getenv("SUDO_UID");
+        if (sudoUid) {
+            struct passwd *pw = getpwuid((uid_t)atoi(sudoUid));
+            if (pw && pw->pw_dir) {
+                homeDir = pw->pw_dir;
+            }
+        }
+        if (!homeDir) {
+            // Last resort: use current user
+            struct passwd *pw = getpwuid(getuid());
+            if (pw && pw->pw_dir) {
+                homeDir = pw->pw_dir;
+            }
+        }
+    }
+    
+    return homeDir ? QString::fromUtf8(homeDir) : QString();
+}
+
 static QString getConfigPath() {
-    QString configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
-    configDir += "/flashmd";
+    QString homeDir = getRealUserHome();
+    
+    QString configDir;
+    if (!homeDir.isEmpty()) {
+        configDir = homeDir + "/.config/flashmd";
+    } else {
+        // Fallback to QStandardPaths if we can't determine home
+        configDir = QStandardPaths::writableLocation(QStandardPaths::ConfigLocation);
+        configDir += "/flashmd";
+    }
+    
     QDir dir;
     if (!dir.exists(configDir)) {
         dir.mkpath(configDir);
@@ -389,13 +430,14 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
         setWindowTitle("flashmd-thingy");
-        setMinimumSize(550, 700);
-        resize(550, 700);
         m_currentTheme = getTheme();
 
         setupUi();
         setupWorker();
         applyTheme(m_currentTheme);
+        
+        setMinimumSize(550, 700);
+        resize(550, 700);
 
         log("flashmd-thingy");
     }
@@ -409,6 +451,8 @@ private slots:
         if (!savedPath.isEmpty()) {
             QFileInfo info(savedPath);
             defaultPath = info.absolutePath();
+        } else {
+            defaultPath = getRealUserHome();
         }
 
         QString filepath = QFileDialog::getOpenFileName(this, "Open ROM File", defaultPath,
@@ -438,7 +482,8 @@ private slots:
             QFileInfo info(savedPath);
             defaultPath = info.absolutePath() + "/" + info.fileName();
         } else {
-            defaultPath = "dump.bin";
+            QString homeDir = getRealUserHome();
+            defaultPath = homeDir.isEmpty() ? "dump.bin" : (homeDir + "/dump.bin");
         }
 
         QString filepath = QFileDialog::getSaveFileName(this, "Save ROM File", defaultPath,
@@ -482,7 +527,8 @@ private slots:
             QFileInfo info(savedPath);
             defaultPath = info.absolutePath() + "/" + info.fileName();
         } else {
-            defaultPath = "save.srm";
+            QString homeDir = getRealUserHome();
+            defaultPath = homeDir.isEmpty() ? "save.srm" : (homeDir + "/save.srm");
         }
 
         QString filepath = QFileDialog::getSaveFileName(this, "Save SRAM File", defaultPath,
@@ -508,6 +554,8 @@ private slots:
         if (!savedPath.isEmpty()) {
             QFileInfo info(savedPath);
             defaultPath = info.absolutePath();
+        } else {
+            defaultPath = getRealUserHome();
         }
 
         QString filepath = QFileDialog::getOpenFileName(this, "Open SRAM File", defaultPath,
@@ -606,16 +654,26 @@ private:
 
         /* ROM Operations section */
         QGroupBox *romGroup = new QGroupBox("ROM Operations");
-        QGridLayout *romLayout = new QGridLayout(romGroup);
-        romLayout->setSpacing(12);
-        romLayout->setContentsMargins(16, 20, 16, 16);
+        QVBoxLayout *romMainLayout = new QVBoxLayout(romGroup);
+        romMainLayout->setSpacing(12);
+        romMainLayout->setContentsMargins(16, 20, 16, 16);
 
-        romLayout->addWidget(new QLabel("Size:"), 0, 0);
+        /* Size selector in its own horizontal layout */
+        QHBoxLayout *sizeLayout = new QHBoxLayout();
+        sizeLayout->setSpacing(8);
+        sizeLayout->addWidget(new QLabel("Size:"));
         m_sizeCombo = new QComboBox();
+        m_sizeCombo->setFixedWidth(400);
         for (int i = 0; i < 7; i++) {
             m_sizeCombo->addItem(SIZE_LABELS[i]);
         }
-        romLayout->addWidget(m_sizeCombo, 0, 1);
+        sizeLayout->addWidget(m_sizeCombo);
+        sizeLayout->addStretch();
+        romMainLayout->addLayout(sizeLayout);
+
+        /* Buttons in a grid layout */
+        QGridLayout *romLayout = new QGridLayout();
+        romLayout->setSpacing(12);
 
         m_writeRomBtn = new QPushButton("Write ROM");
         m_readRomBtn = new QPushButton("Read ROM");
@@ -627,11 +685,12 @@ private:
         connect(m_readRomBtn, &QPushButton::clicked, this, &MainWindow::onReadRom);
         connect(m_eraseBtn, &QPushButton::clicked, this, &MainWindow::onErase);
 
-        romLayout->addWidget(m_writeRomBtn, 1, 0);
-        romLayout->addWidget(m_readRomBtn, 1, 1);
-        romLayout->addWidget(m_noTrimCheck, 1, 2);
-        romLayout->addWidget(m_eraseBtn, 2, 0);
-        romLayout->addWidget(m_fullEraseCheck, 2, 1);
+        romLayout->addWidget(m_writeRomBtn, 0, 0);
+        romLayout->addWidget(m_readRomBtn, 0, 1);
+        romLayout->addWidget(m_noTrimCheck, 0, 2);
+        romLayout->addWidget(m_eraseBtn, 1, 0);
+        romLayout->addWidget(m_fullEraseCheck, 1, 1);
+        romMainLayout->addLayout(romLayout);
 
         mainLayout->addWidget(romGroup);
 
@@ -767,8 +826,8 @@ private:
                     color: #8e8e93;
                 }
                 QComboBox {
-                    background-color: #ffffff;
-                    border: 2px solid #e5e5e7;
+                    background-color: #e5e5e7;
+                    border: 2px solid #d1d1d6;
                     border-radius: 8px;
                     padding: 8px 12px;
                     min-height: 20px;
@@ -790,8 +849,8 @@ private:
                     height: 0;
                 }
                 QComboBox QAbstractItemView {
-                    background-color: #ffffff;
-                    border: 2px solid #e5e5e7;
+                    background-color: #e5e5e7;
+                    border: 2px solid #d1d1d6;
                     border-radius: 8px;
                     selection-background-color: #007aff;
                     selection-color: white;
@@ -892,8 +951,8 @@ private:
                     color: #636366;
                 }
                 QComboBox {
-                    background-color: #2c2c2e;
-                    border: 2px solid #38383a;
+                    background-color: #48484a;
+                    border: 2px solid #545458;
                     border-radius: 8px;
                     padding: 8px 12px;
                     min-height: 20px;
@@ -916,8 +975,8 @@ private:
                     height: 0;
                 }
                 QComboBox QAbstractItemView {
-                    background-color: #2c2c2e;
-                    border: 2px solid #38383a;
+                    background-color: #48484a;
+                    border: 2px solid #545458;
                     border-radius: 8px;
                     selection-background-color: #0a84ff;
                     selection-color: white;
@@ -1129,6 +1188,14 @@ int main(int argc, char *argv[]) {
         if (setgid(realGid) < 0 || setuid(realUid) < 0) {
             fprintf(stderr, "Failed to drop privileges: %s\n", strerror(errno));
             _exit(1);
+        }
+
+        /* Update environment variables to match the real user */
+        struct passwd *pw = getpwuid(realUid);
+        if (pw && pw->pw_dir) {
+            setenv("HOME", pw->pw_dir, 1);
+            setenv("USER", pw->pw_name, 1);
+            setenv("USERNAME", pw->pw_name, 1);
         }
 
         g_usingIpc = true;
