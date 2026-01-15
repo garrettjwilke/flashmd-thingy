@@ -2,5 +2,6 @@ flashmd
 flashmd-gui
 flashmd-legacy
 flashmd-qt
+src/flashmd_core_qt.o
 original.bin
 dump.bin
