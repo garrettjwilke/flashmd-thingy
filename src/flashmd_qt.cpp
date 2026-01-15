@@ -789,6 +789,7 @@ private:
         QString grayLight = "#999999";
         QString textColor = isLight ? "#1d1d1f" : "#f5f5f7";
         QString grayText = grayColor;
+        QString blueColor = isLight ? "#007aff" : "#0a84ff";
         
         QString grayStyleSheet = QString(R"(
             QMainWindow {
@@ -895,7 +896,7 @@ private:
                 text-align: center;
             }
             QProgressBar::chunk {
-                background-color: %4;
+                background-color: %8;
                 border-radius: 8px;
             }
             QTextEdit {
@@ -921,7 +922,7 @@ private:
             }
         )").arg(bgColor).arg(textColor).arg(grayText).arg(grayColor)
           .arg(groupBg).arg(isLight ? "#e5e5e7" : "#38383a")
-          .arg(isLight ? "#ffffff" : "#000000");
+          .arg(isLight ? "#ffffff" : "#000000").arg(blueColor);
         
         qApp->setStyleSheet(grayStyleSheet);
         
