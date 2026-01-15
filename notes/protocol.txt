@@ -1,0 +1,43 @@
+Protocol Summary
+
+  Command Format (64 bytes):
+  - Byte 0: Command code
+  - Bytes 1-4: Magic 0xAA 0x55 0xAA 0xBB
+  - Bytes 5+: Parameters
+
+  Commands:
+  Code: 0x0C
+  Function: Connect/Ping
+  Parameters: None
+  ────────────────────────────────────────
+  Code: 0x0D
+  Function: Check Flash ID
+  Parameters: None
+  ────────────────────────────────────────
+  Code: 0x0E
+  Function: Full Erase (Flash+SRAM)
+  Parameters: None
+  ────────────────────────────────────────
+  Code: 0x0F
+  Function: Clear Buffer
+  Parameters: None
+  ────────────────────────────────────────
+  Code: 0x0A
+  Function: Dump ROM
+  Parameters: Byte5: 0x01=512K, 0x02=1M, 0x03=2M, 0x04=4M
+  ────────────────────────────────────────
+  Code: 0x1A
+  Function: Dump SRAM
+  Parameters: Byte5: 0x01=32K, else=8K
+  ────────────────────────────────────────
+  Code: 0x0B
+  Function: Write ROM
+  Parameters: Byte5: offset, Byte6: bank (send 1024B data first)
+  ────────────────────────────────────────
+  Code: 0x1B
+  Function: Write SRAM
+  Parameters: Byte5: offset, Byte6: bank (send 1024B data first)
+  ────────────────────────────────────────
+  Code: 0x1E
+  Function: Sector Erase
+  Parameters: Byte5: size code, Bytes6-8: address if Byte5=0
