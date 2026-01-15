@@ -380,7 +380,8 @@ class MainWindow : public QMainWindow {
 public:
     MainWindow(QWidget *parent = nullptr) : QMainWindow(parent) {
         setWindowTitle("flashmd-thingy");
-        setMinimumSize(600, 700);
+        setMinimumSize(700, 900);
+        resize(700, 1000);
         m_currentTheme = getTheme();
 
         setupUi();
@@ -537,7 +538,7 @@ private slots:
         m_currentTheme = (m_currentTheme == "dark") ? "light" : "dark";
         saveTheme(m_currentTheme);
         if (m_themeBtn) {
-            m_themeBtn->setText(m_currentTheme == "dark" ? "☀️" : "🌙");
+            m_themeBtn->setText(m_currentTheme == "dark" ? "☀" : "☾");
         }
         applyTheme(m_currentTheme);
     }
@@ -590,7 +591,8 @@ private:
         
         // Theme toggle button
         m_themeBtn = new QPushButton();
-        m_themeBtn->setText(m_currentTheme == "dark" ? "☀️" : "🌙");
+        // Use Unicode symbols that work better across platforms
+        m_themeBtn->setText(m_currentTheme == "dark" ? "☀" : "☾");
         m_themeBtn->setToolTip("Toggle theme");
         m_themeBtn->setFixedSize(40, 40);
         m_themeBtn->setStyleSheet(R"(
@@ -598,7 +600,7 @@ private:
                 background-color: transparent;
                 border: 2px solid;
                 border-radius: 8px;
-                font-size: 18px;
+                font-size: 20px;
                 padding: 0;
             }
             QPushButton:hover {
@@ -622,12 +624,12 @@ private:
         deviceLayout->addWidget(m_deviceStatus);
         deviceLayout->addStretch();
 
-        QPushButton *connectBtn = new QPushButton("Connect");
-        QPushButton *checkIdBtn = new QPushButton("Check ID");
-        connect(connectBtn, &QPushButton::clicked, this, &MainWindow::onConnect);
-        connect(checkIdBtn, &QPushButton::clicked, this, &MainWindow::onCheckId);
-        deviceLayout->addWidget(connectBtn);
-        deviceLayout->addWidget(checkIdBtn);
+        m_connectBtn = new QPushButton("Connect");
+        m_checkIdBtn = new QPushButton("Check ID");
+        connect(m_connectBtn, &QPushButton::clicked, this, &MainWindow::onConnect);
+        connect(m_checkIdBtn, &QPushButton::clicked, this, &MainWindow::onCheckId);
+        deviceLayout->addWidget(m_connectBtn);
+        deviceLayout->addWidget(m_checkIdBtn);
 
         mainLayout->addWidget(deviceGroup);
 
@@ -647,18 +649,18 @@ private:
         m_noTrimCheck = new QCheckBox("No trim");
         romLayout->addWidget(m_noTrimCheck, 0, 2);
 
-        QPushButton *writeRomBtn = new QPushButton("Write ROM");
-        QPushButton *readRomBtn = new QPushButton("Read ROM");
-        QPushButton *eraseBtn = new QPushButton("Erase");
+        m_writeRomBtn = new QPushButton("Write ROM");
+        m_readRomBtn = new QPushButton("Read ROM");
+        m_eraseBtn = new QPushButton("Erase");
         m_fullEraseCheck = new QCheckBox("Full Erase");
 
-        connect(writeRomBtn, &QPushButton::clicked, this, &MainWindow::onWriteRom);
-        connect(readRomBtn, &QPushButton::clicked, this, &MainWindow::onReadRom);
-        connect(eraseBtn, &QPushButton::clicked, this, &MainWindow::onErase);
+        connect(m_writeRomBtn, &QPushButton::clicked, this, &MainWindow::onWriteRom);
+        connect(m_readRomBtn, &QPushButton::clicked, this, &MainWindow::onReadRom);
+        connect(m_eraseBtn, &QPushButton::clicked, this, &MainWindow::onErase);
 
-        romLayout->addWidget(writeRomBtn, 1, 0);
-        romLayout->addWidget(readRomBtn, 1, 1);
-        romLayout->addWidget(eraseBtn, 1, 2);
+        romLayout->addWidget(m_writeRomBtn, 1, 0);
+        romLayout->addWidget(m_readRomBtn, 1, 1);
+        romLayout->addWidget(m_eraseBtn, 1, 2);
         romLayout->addWidget(m_fullEraseCheck, 1, 3);
 
         mainLayout->addWidget(romGroup);
@@ -669,13 +671,13 @@ private:
         sramLayout->setSpacing(12);
         sramLayout->setContentsMargins(16, 20, 16, 16);
 
-        QPushButton *readSramBtn = new QPushButton("Read SRAM");
-        QPushButton *writeSramBtn = new QPushButton("Write SRAM");
-        connect(readSramBtn, &QPushButton::clicked, this, &MainWindow::onReadSram);
-        connect(writeSramBtn, &QPushButton::clicked, this, &MainWindow::onWriteSram);
+        m_writeSramBtn = new QPushButton("Write SRAM");
+        m_readSramBtn = new QPushButton("Read SRAM");
+        connect(m_writeSramBtn, &QPushButton::clicked, this, &MainWindow::onWriteSram);
+        connect(m_readSramBtn, &QPushButton::clicked, this, &MainWindow::onReadSram);
 
-        sramLayout->addWidget(readSramBtn);
-        sramLayout->addWidget(writeSramBtn);
+        sramLayout->addWidget(m_writeSramBtn);
+        sramLayout->addWidget(m_readSramBtn);
         sramLayout->addStretch();
 
         mainLayout->addWidget(sramGroup);
@@ -704,9 +706,9 @@ private:
 
         /* Bottom buttons */
         QHBoxLayout *bottomLayout = new QHBoxLayout();
-        QPushButton *clearBtn = new QPushButton("Clear");
-        connect(clearBtn, &QPushButton::clicked, this, &MainWindow::onClearLog);
-        bottomLayout->addWidget(clearBtn);
+        m_clearBtn = new QPushButton("Clear");
+        connect(m_clearBtn, &QPushButton::clicked, this, &MainWindow::onClearLog);
+        bottomLayout->addWidget(m_clearBtn);
         bottomLayout->addStretch();
 
         m_verboseCheck = new QCheckBox("Verbose");
@@ -847,8 +849,8 @@ private:
                     border-radius: 8px;
                 }
                 QTextEdit {
-                    background-color: #1d1d1f;
-                    color: #f5f5f7;
+                    background-color: #ffffff;
+                    color: #1d1d1f;
                     border: 2px solid #e5e5e7;
                     border-radius: 12px;
                     padding: 12px;
@@ -857,6 +859,12 @@ private:
                 }
                 QLabel {
                     font-size: 13px;
+                }
+                QGroupBox QLabel {
+                    background-color: transparent;
+                }
+                QGroupBox QCheckBox {
+                    background-color: transparent;
                 }
             )";
         } else { // dark theme
@@ -980,6 +988,12 @@ private:
                 QLabel {
                     font-size: 13px;
                 }
+                QGroupBox QLabel {
+                    background-color: transparent;
+                }
+                QGroupBox QCheckBox {
+                    background-color: transparent;
+                }
             )";
         }
         
@@ -1014,21 +1028,82 @@ private:
         // Update console error colors
         // This will be handled in onLogMessage
         
-        // Update theme button border
+        // Update theme button border and text color
         if (m_themeBtn) {
             QString borderColor = (theme == "light") ? "#e5e5e7" : "#38383a";
+            QString textColor = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
             m_themeBtn->setStyleSheet(QString(R"(
                 QPushButton {
                     background-color: transparent;
                     border: 2px solid %1;
                     border-radius: 8px;
-                    font-size: 18px;
+                    font-size: 20px;
                     padding: 0;
+                    color: %2;
                 }
                 QPushButton:hover {
                     background-color: rgba(128, 128, 128, 0.2);
                 }
-            )").arg(borderColor));
+            )").arg(borderColor).arg(textColor));
+        }
+        
+        // Apply custom button colors
+        applyButtonColors(theme);
+    }
+    
+    void applyButtonColors(const QString &theme) {
+        // Washed out colors
+        QString writeGreen = (theme == "light") ? "#a8d5ba" : "#4a7c5e";
+        QString readBlue = (theme == "light") ? "#a8c5d5" : "#4a6c7c";
+        QString eraseRed = (theme == "light") ? "#d5a8a8" : "#7c4a4a";
+        QString deviceGray = (theme == "light") ? "#c7c7cc" : "#636366";
+        QString buttonText = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
+        
+        QString baseStyle = QString(R"(
+            QPushButton {
+                background-color: %1;
+                color: %2;
+                border: none;
+                border-radius: 8px;
+                padding: 10px 20px;
+                font-weight: 600;
+                font-size: 13px;
+                min-height: 20px;
+            }
+            QPushButton:hover {
+                opacity: 0.8;
+            }
+            QPushButton:pressed {
+                opacity: 0.6;
+            }
+            QPushButton:disabled {
+                opacity: 0.4;
+            }
+        )");
+        
+        if (m_writeRomBtn) {
+            m_writeRomBtn->setStyleSheet(baseStyle.arg(writeGreen).arg(buttonText));
+        }
+        if (m_readRomBtn) {
+            m_readRomBtn->setStyleSheet(baseStyle.arg(readBlue).arg(buttonText));
+        }
+        if (m_eraseBtn) {
+            m_eraseBtn->setStyleSheet(baseStyle.arg(eraseRed).arg(buttonText));
+        }
+        if (m_writeSramBtn) {
+            m_writeSramBtn->setStyleSheet(baseStyle.arg(writeGreen).arg(buttonText));
+        }
+        if (m_readSramBtn) {
+            m_readSramBtn->setStyleSheet(baseStyle.arg(readBlue).arg(buttonText));
+        }
+        if (m_connectBtn) {
+            m_connectBtn->setStyleSheet(baseStyle.arg(deviceGray).arg(buttonText));
+        }
+        if (m_checkIdBtn) {
+            m_checkIdBtn->setStyleSheet(baseStyle.arg(deviceGray).arg(buttonText));
+        }
+        if (m_clearBtn) {
+            m_clearBtn->setStyleSheet(baseStyle.arg(deviceGray).arg(buttonText));
         }
     }
 
@@ -1037,6 +1112,14 @@ private:
     QLabel *m_titleLabel;
     QLabel *m_subtitleLabel;
     QPushButton *m_themeBtn;
+    QPushButton *m_connectBtn;
+    QPushButton *m_checkIdBtn;
+    QPushButton *m_writeRomBtn;
+    QPushButton *m_readRomBtn;
+    QPushButton *m_eraseBtn;
+    QPushButton *m_writeSramBtn;
+    QPushButton *m_readSramBtn;
+    QPushButton *m_clearBtn;
     QComboBox *m_sizeCombo;
     QCheckBox *m_noTrimCheck;
     QCheckBox *m_fullEraseCheck;
