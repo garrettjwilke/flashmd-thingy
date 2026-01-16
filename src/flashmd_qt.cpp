@@ -815,8 +815,8 @@ private:
                 subcontrol-origin: margin;
                 left: 16px;
                 padding: 4px 12px;
-                background-color: %5;
-                color: %3;
+                background-color: %4;
+                color: white;
                 border: 2px solid %4;
                 border-radius: 6px;
             }
@@ -1027,8 +1027,8 @@ private:
                     subcontrol-origin: margin;
                     left: 16px;
                     padding: 4px 12px;
-                    background-color: #ffffff;
-                    border: 2px solid #e5e5e7;
+                    background-color: #e5e5e7;
+                    border: 2px solid #d1d1d6;
                     border-radius: 6px;
                 }
                 QPushButton {
@@ -1154,8 +1154,8 @@ private:
                     subcontrol-origin: margin;
                     left: 16px;
                     padding: 4px 12px;
-                    background-color: #2c2c2e;
-                    border: 2px solid #38383a;
+                    background-color: #48484a;
+                    border: 2px solid #545458;
                     border-radius: 6px;
                 }
                 QPushButton {
