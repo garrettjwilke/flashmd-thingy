@@ -476,7 +476,7 @@ private slots:
         m_worker->setOperation(UsbWorker::OP_WRITE_ROM, filepath,
                                SIZE_VALUES[m_sizeCombo->currentIndex()],
                                m_noTrimCheck->isChecked(),
-                               m_verboseCheck->isChecked());
+                               false);
         startOperation();
     }
 
@@ -507,7 +507,7 @@ private slots:
         m_worker->setOperation(UsbWorker::OP_READ_ROM, filepath,
                                SIZE_VALUES[m_sizeCombo->currentIndex()],
                                m_noTrimCheck->isChecked(),
-                               m_verboseCheck->isChecked());
+                               false);
         startOperation();
     }
 
@@ -520,7 +520,7 @@ private slots:
         log("");
         m_worker->setOperation(UsbWorker::OP_ERASE, QString(),
                                SIZE_VALUES[m_sizeCombo->currentIndex()],
-                               false, m_verboseCheck->isChecked(),
+                               false, false,
                                m_fullEraseCheck->isChecked());
         startOperation();
     }
@@ -721,7 +721,7 @@ private:
         consoleGroup->setFixedHeight(160);
         QVBoxLayout *consoleLayout = new QVBoxLayout(consoleGroup);
         consoleLayout->setSpacing(0);
-        consoleLayout->setContentsMargins(16, 0, 16, 12);
+        consoleLayout->setContentsMargins(16, 8, 16, 12);
 
         m_console = new QTextEdit();
         m_console->setReadOnly(true);
@@ -736,9 +736,6 @@ private:
         connect(m_clearBtn, &QPushButton::clicked, this, &MainWindow::onClearLog);
         bottomLayout->addWidget(m_clearBtn);
         bottomLayout->addStretch();
-
-        m_verboseCheck = new QCheckBox("Verbose");
-        bottomLayout->addWidget(m_verboseCheck);
 
         // Theme toggle button
         m_themeBtn = new QPushButton();
@@ -1455,7 +1452,6 @@ private:
     QListView *m_sizeListView;
     QCheckBox *m_noTrimCheck;
     QCheckBox *m_fullEraseCheck;
-    QCheckBox *m_verboseCheck;
     QProgressBar *m_progressBar;
     QLabel *m_progressLabel;
     QTextEdit *m_console;
