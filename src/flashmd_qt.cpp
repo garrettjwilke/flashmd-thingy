@@ -971,7 +971,7 @@ private:
             QPushButton {
                 background-color: %1 !important;
                 color: white !important;
-                border: none !important;
+                border: 2px solid %1 !important;
                 border-radius: 8px;
                 padding: 10px 20px;
                 font-weight: 600;
@@ -980,13 +980,16 @@ private:
             }
             QPushButton:hover {
                 background-color: %1 !important;
+                border: 2px solid %1 !important;
             }
             QPushButton:pressed {
                 background-color: %1 !important;
+                border: 2px solid %1 !important;
             }
             QPushButton:disabled {
                 background-color: %1 !important;
                 color: white !important;
+                border: 2px solid %1 !important;
             }
         )").arg(grayColor);
         
@@ -1392,46 +1395,49 @@ private:
         QString eraseRed = (theme == "light") ? "#d5a8a8" : "#7c4a4a";
         QString clearGray = (theme == "light") ? "#c7c7cc" : "#636366";
         QString buttonText = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
-        
-        QString baseStyle = QString(R"(
-            QPushButton {
-                background-color: %1;
-                color: %2;
-                border: none;
-                border-radius: 8px;
-                padding: 10px 20px;
-                font-weight: 600;
-                font-size: 16px;
-                min-height: 20px;
-            }
-            QPushButton:hover {
-                opacity: 0.8;
-            }
-            QPushButton:pressed {
-                opacity: 0.6;
-            }
-            QPushButton:disabled {
-                opacity: 0.4;
-            }
-        )");
+        QString hoverBorder = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
+
+        auto makeButtonStyle = [&](const QString &bgColor) {
+            return QString(R"(
+                QPushButton {
+                    background-color: %1;
+                    color: %2;
+                    border: 2px solid %1;
+                    border-radius: 8px;
+                    padding: 10px 20px;
+                    font-weight: 600;
+                    font-size: 16px;
+                    min-height: 20px;
+                }
+                QPushButton:hover {
+                    border: 2px solid %3;
+                }
+                QPushButton:pressed {
+                    border: 2px solid %3;
+                }
+                QPushButton:disabled {
+                    opacity: 0.4;
+                }
+            )").arg(bgColor).arg(buttonText).arg(hoverBorder);
+        };
         
         if (m_writeRomBtn) {
-            m_writeRomBtn->setStyleSheet(baseStyle.arg(writeGreen).arg(buttonText));
+            m_writeRomBtn->setStyleSheet(makeButtonStyle(writeGreen));
         }
         if (m_readRomBtn) {
-            m_readRomBtn->setStyleSheet(baseStyle.arg(readBlue).arg(buttonText));
+            m_readRomBtn->setStyleSheet(makeButtonStyle(readBlue));
         }
         if (m_eraseBtn) {
-            m_eraseBtn->setStyleSheet(baseStyle.arg(eraseRed).arg(buttonText));
+            m_eraseBtn->setStyleSheet(makeButtonStyle(eraseRed));
         }
         if (m_writeSramBtn) {
-            m_writeSramBtn->setStyleSheet(baseStyle.arg(writeGreen).arg(buttonText));
+            m_writeSramBtn->setStyleSheet(makeButtonStyle(writeGreen));
         }
         if (m_readSramBtn) {
-            m_readSramBtn->setStyleSheet(baseStyle.arg(readBlue).arg(buttonText));
+            m_readSramBtn->setStyleSheet(makeButtonStyle(readBlue));
         }
         if (m_clearBtn) {
-            m_clearBtn->setStyleSheet(baseStyle.arg(clearGray).arg(buttonText));
+            m_clearBtn->setStyleSheet(makeButtonStyle(clearGray));
         }
     }
 
