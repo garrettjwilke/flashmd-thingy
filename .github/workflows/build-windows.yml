@@ -31,10 +31,36 @@ jobs:
           export PATH="/mingw64/share/qt6/bin:/mingw64/bin:$PATH"
           mingw32-make
 
+      - name: bundle DLLs
+        shell: msys2 {0}
+        run: |
+          # Create release directory
+          mkdir -p release
+          
+          # Copy executables
+          cp flashmd.exe release/
+          cp flashmd-gui.exe release/
+          
+          # Find and copy libusb DLL
+          cp /mingw64/bin/libusb-1.0.dll release/ 2>/dev/null || echo "libusb-1.0.dll not found"
+          
+          # Find and copy Qt6 DLLs (required for GUI)
+          cp /mingw64/bin/Qt6Core.dll release/ 2>/dev/null || echo "Qt6Core.dll not found"
+          cp /mingw64/bin/Qt6Gui.dll release/ 2>/dev/null || echo "Qt6Gui.dll not found"
+          cp /mingw64/bin/Qt6Widgets.dll release/ 2>/dev/null || echo "Qt6Widgets.dll not found"
+          
+          # Copy Qt6 platform plugin (required for GUI to work)
+          mkdir -p release/platforms
+          cp /mingw64/share/qt6/plugins/platforms/qwindows.dll release/platforms/ 2>/dev/null || echo "qwindows.dll not found"
+          
+          # List what we bundled
+          ls -la release/
+
       - name: upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: flashmd-windows
           path: |
-            flashmd.exe
-            flashmd-gui.exe
+            release/*.exe
+            release/*.dll
+            release/platforms/
