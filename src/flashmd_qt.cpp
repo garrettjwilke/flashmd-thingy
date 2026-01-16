@@ -603,7 +603,7 @@ private slots:
     }
 
     void onLogMessage(const QString &message, bool isError) {
-        QString errorColor = (m_currentTheme == "light") ? "#ff3b30" : "#ff453a";
+        QString errorColor = (m_currentTheme == "light") ? LIGHT_ERROR : DARK_ERROR;
         if (isError) {
             m_console->append("<span style='color: " + errorColor + ";'>" + message.toHtmlEscaped() + "</span>");
         } else {
@@ -711,7 +711,7 @@ private:
         m_progressBar->setValue(0);
         progressLayout->addWidget(m_progressBar, 1);
         m_progressLabel = new QLabel("0 / 0 KB");
-        m_progressLabel->setStyleSheet("color: #86868b; font-size: 14px; font-weight: 500;");
+        m_progressLabel->setStyleSheet("color: " LIGHT_TEXT_SUBTLE "; font-size: " FONT_SIZE_SMALL "; font-weight: 500;");
         progressLayout->addWidget(m_progressLabel);
         mainLayout->addLayout(progressLayout);
 
@@ -784,257 +784,104 @@ private:
     }
 
     void applyGrayStylesheet() {
-        // Determine base colors based on current theme
         bool isLight = (m_currentTheme == "light");
-        QString bgColor = isLight ? "#f5f5f7" : "#1c1c1e";
-        QString groupBg = isLight ? "#ffffff" : "#2c2c2e";
-        QString grayColor = GRAY_COLOR;
-        QString grayDark = "#666666";
-        QString grayLight = "#999999";
-        QString textColor = isLight ? "#1d1d1f" : "#f5f5f7";
-        QString grayText = grayColor;
-        QString blueColor = isLight ? "#007aff" : "#0a84ff";
-        
-        QString grayStyleSheet = QString(R"(
-            QMainWindow {
-                background-color: %1;
-            }
-            QWidget {
-                background-color: %1;
-                color: %2;
-                font-family: "Open Sans";
-            }
+        QString bg = isLight ? LIGHT_BG : DARK_BG;
+        QString groupBg = isLight ? LIGHT_GROUP_BG : DARK_GROUP_BG;
+        QString text = isLight ? LIGHT_TEXT : DARK_TEXT;
+        QString consoleBg = isLight ? LIGHT_CONSOLE_BG : DARK_CONSOLE_BG;
+        QString progressBg = isLight ? LIGHT_PROGRESS_BG : DARK_PROGRESS_BG;
+        QString gray = GRAY_COLOR;
+        QString accent = isLight ? LIGHT_ACCENT : DARK_ACCENT;
+
+        QString styleSheet = QString(R"(
+            QMainWindow { background-color: %1; }
+            QWidget { background-color: %1; color: %2; font-family: "Open Sans"; }
             QGroupBox {
-                font-weight: 600;
-                font-size: 16px;
-                color: %3;
-                border: 2px solid %4;
-                border-radius: 12px;
-                margin-top: 12px;
-                padding-top: 12px;
-                background-color: %5;
+                font-weight: 600; font-size: )" FONT_SIZE_NORMAL R"(; color: %3;
+                border: )" BORDER_WIDTH R"( solid %3; border-radius: 12px;
+                margin-top: 12px; padding-top: 12px; background-color: %4;
             }
             QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 16px;
-                padding: 4px 12px;
-                background-color: %4;
-                color: white;
-                border: 2px solid %4;
-                border-radius: 6px;
+                subcontrol-origin: margin; left: )" GROUP_PADDING R"(; padding: 4px 12px;
+                background-color: %3; color: white; border: )" BORDER_WIDTH R"( solid %3;
+                border-radius: )" BORDER_RADIUS_SMALL R"(;
             }
             QPushButton {
-                background-color: %4 !important;
-                color: white !important;
-                border: none !important;
-                border-radius: 8px;
-                padding: 10px 20px;
-                font-weight: 600;
-                font-size: 16px;
-                min-height: 20px;
-            }
-            QPushButton:hover {
-                background-color: %4 !important;
-            }
-            QPushButton:pressed {
-                background-color: %4 !important;
-            }
-            QPushButton:disabled {
-                background-color: %4 !important;
-                color: white !important;
+                background-color: %3 !important; color: white !important; border: none !important;
+                border-radius: )" BORDER_RADIUS R"(; padding: )" BUTTON_PADDING R"(;
+                font-weight: 600; font-size: )" FONT_SIZE_BUTTON R"(; min-height: )" BUTTON_MIN_HEIGHT R"(;
             }
             QComboBox {
-                background-color: %4 !important;
-                border: 2px solid %4 !important;
-                border-radius: 8px;
-                padding: 8px 12px;
-                min-height: 20px;
-                font-size: 16px;
-                color: white !important;
+                background-color: %3 !important; border: )" BORDER_WIDTH R"( solid %3 !important;
+                border-radius: )" BORDER_RADIUS R"(; padding: )" COMBO_PADDING R"(;
+                min-height: )" COMBO_MIN_HEIGHT R"(; font-size: )" FONT_SIZE_NORMAL R"(; color: white !important;
             }
-            QComboBox:hover {
-                border-color: %4 !important;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 30px;
-            }
+            QComboBox::drop-down { border: none; width: 30px; }
             QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 6px solid white;
-                width: 0;
-                height: 0;
+                image: none; border-left: 5px solid transparent;
+                border-right: 5px solid transparent; border-top: 6px solid white; width: 0; height: 0;
             }
-            QComboBox QAbstractItemView {
-                background-color: %4 !important;
-                border: 2px solid %4 !important;
-                border-radius: 8px;
-                selection-background-color: %4 !important;
-                selection-color: white !important;
-                color: white !important;
-                outline: none;
-            }
-            QComboBox QAbstractItemView::item {
-                padding: 8px 12px;
-                min-height: 24px;
-            }
-            QComboBox QAbstractItemView::item:hover {
-                background-color: %8 !important;
-                color: white !important;
-            }
-            QComboBox QAbstractItemView::item:selected {
-                background-color: %8 !important;
-                color: white !important;
-            }
-            QCheckBox {
-                font-size: 16px;
-                spacing: 8px;
-                color: %3 !important;
-            }
+            QCheckBox { font-size: )" FONT_SIZE_NORMAL R"(; spacing: 8px; color: %3 !important; }
             QCheckBox::indicator {
-                width: 20px;
-                height: 20px;
-                border: 2px solid %4 !important;
-                border-radius: 4px;
-                background-color: %4 !important;
-            }
-            QCheckBox::indicator:hover {
-                border-color: %4 !important;
-            }
-            QCheckBox::indicator:checked {
-                background-color: %4 !important;
-                border-color: %4 !important;
+                width: 20px; height: 20px; border: )" BORDER_WIDTH R"( solid %3 !important;
+                border-radius: 4px; background-color: %3 !important;
             }
             QProgressBar {
-                border: none;
-                border-radius: 8px;
-                background-color: %6;
-                height: 8px;
-                text-align: center;
+                border: none; border-radius: )" BORDER_RADIUS R"(;
+                background-color: %5; height: )" PROGRESS_HEIGHT R"(; text-align: center;
             }
-            QProgressBar::chunk {
-                background-color: %8;
-                border-radius: 8px;
-            }
+            QProgressBar::chunk { background-color: %6; border-radius: )" BORDER_RADIUS R"(; }
             QTextEdit {
-                background-color: %7;
-                color: %2;
-                border: none;
-                border-radius: 8px;
-                padding: 8px;
-                font-family: "Roboto Mono";
-                font-size: 14px;
+                background-color: %7; color: %2; border: none;
+                border-radius: )" BORDER_RADIUS R"(; padding: 8px;
+                font-family: "Roboto Mono"; font-size: )" FONT_SIZE_SMALL R"(;
             }
-            QLabel {
-                font-size: 16px;
-                color: %3 !important;
-            }
-            QGroupBox QLabel {
-                background-color: transparent;
-                color: %3 !important;
-            }
-            QGroupBox QCheckBox {
-                background-color: transparent;
-                color: %3 !important;
-            }
-        )").arg(bgColor).arg(textColor).arg(grayText).arg(grayColor)
-          .arg(groupBg).arg(isLight ? "#e5e5e7" : "#38383a")
-          .arg(isLight ? "#ffffff" : "#000000").arg(blueColor);
-        
-        qApp->setStyleSheet(grayStyleSheet);
+            QLabel { font-size: )" FONT_SIZE_NORMAL R"(; color: %3 !important; }
+            QGroupBox QLabel { background-color: transparent; color: %3 !important; }
+            QGroupBox QCheckBox { background-color: transparent; color: %3 !important; }
+        )").arg(bg).arg(text).arg(gray).arg(groupBg).arg(progressBg).arg(accent).arg(consoleBg);
 
-        // Update progress label to gray
+        qApp->setStyleSheet(styleSheet);
+
         if (m_progressLabel) {
-            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 500;")
-                .arg(grayText));
+            m_progressLabel->setStyleSheet(
+                QString("color: %1; font-size: " FONT_SIZE_SMALL "; font-weight: 500;").arg(gray));
         }
-        
-        // Update theme button to gray
+
         if (m_themeBtn) {
             m_themeBtn->setStyleSheet(QString(R"(
                 QPushButton {
-                    background-color: transparent;
-                    border: 2px solid %1;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    padding: 0;
-                    color: %1;
+                    background-color: transparent; border: )" BORDER_WIDTH R"( solid %1;
+                    border-radius: )" BORDER_RADIUS R"(; font-size: )" FONT_SIZE_THEME_BTN R"(;
+                    padding: 0; color: %1;
                 }
-                QPushButton:hover {
-                    background-color: rgba(128, 128, 128, 0.2);
-                }
-            )").arg(grayColor));
-        }
-        
-        // Explicitly set ALL buttons to gray (they have individual stylesheets that override global)
-        QString grayButtonStyle = QString(R"(
-            QPushButton {
-                background-color: %1 !important;
-                color: white !important;
-                border: )" BORDER_WIDTH R"( solid %1 !important;
-                border-radius: )" BORDER_RADIUS R"(;
-                padding: )" BUTTON_PADDING R"(;
-                font-weight: 600;
-                font-size: )" FONT_SIZE_BUTTON R"(;
-                min-height: )" BUTTON_MIN_HEIGHT R"(;
-            }
-            QPushButton:hover {
-                background-color: %1 !important;
-                border: )" BORDER_WIDTH R"( solid %1 !important;
-            }
-            QPushButton:pressed {
-                background-color: %1 !important;
-                border: )" BORDER_WIDTH R"( solid %1 !important;
-            }
-            QPushButton:disabled {
-                background-color: %1 !important;
-                color: white !important;
-                border: )" BORDER_WIDTH R"( solid %1 !important;
-            }
-        )").arg(grayColor);
-        
-        if (m_writeRomBtn) {
-            m_writeRomBtn->setStyleSheet(grayButtonStyle);
-        }
-        if (m_readRomBtn) {
-            m_readRomBtn->setStyleSheet(grayButtonStyle);
-        }
-        if (m_eraseBtn) {
-            m_eraseBtn->setStyleSheet(grayButtonStyle);
-        }
-        if (m_writeSramBtn) {
-            m_writeSramBtn->setStyleSheet(grayButtonStyle);
-        }
-        if (m_readSramBtn) {
-            m_readSramBtn->setStyleSheet(grayButtonStyle);
-        }
-        if (m_clearBtn) {
-            m_clearBtn->setStyleSheet(grayButtonStyle);
+                QPushButton:hover { background-color: rgba(128, 128, 128, 0.2); }
+            )").arg(gray));
         }
 
-        // Gray out combo box list view
+        QString grayBtnStyle = QString(R"(
+            QPushButton {
+                background-color: %1 !important; color: white !important;
+                border: )" BORDER_WIDTH R"( solid %1 !important; border-radius: )" BORDER_RADIUS R"(;
+                padding: )" BUTTON_PADDING R"(; font-weight: 600;
+                font-size: )" FONT_SIZE_BUTTON R"(; min-height: )" BUTTON_MIN_HEIGHT R"(;
+            }
+        )").arg(gray);
+
+        if (m_writeRomBtn) m_writeRomBtn->setStyleSheet(grayBtnStyle);
+        if (m_readRomBtn) m_readRomBtn->setStyleSheet(grayBtnStyle);
+        if (m_eraseBtn) m_eraseBtn->setStyleSheet(grayBtnStyle);
+        if (m_writeSramBtn) m_writeSramBtn->setStyleSheet(grayBtnStyle);
+        if (m_readSramBtn) m_readSramBtn->setStyleSheet(grayBtnStyle);
+        if (m_clearBtn) m_clearBtn->setStyleSheet(grayBtnStyle);
+
         if (m_sizeListView) {
             m_sizeListView->setStyleSheet(QString(R"(
-                QListView {
-                    background-color: %1;
-                    outline: none;
-                }
-                QListView::item {
-                    padding: 8px 12px;
-                    min-height: 24px;
-                    color: white;
-                }
-                QListView::item:hover {
-                    background-color: %1;
-                    color: white;
-                }
-                QListView::item:selected {
-                    background-color: %1;
-                    color: white;
-                }
-            )").arg(grayColor));
+                QListView { background-color: %1; outline: none; }
+                QListView::item { padding: )" LISTVIEW_PADDING R"(; min-height: )" LISTVIEW_MIN_HEIGHT R"(; color: white; }
+                QListView::item:hover { background-color: %1; color: white; }
+                QListView::item:selected { background-color: %1; color: white; }
+            )").arg(gray));
         }
     }
 
@@ -1043,350 +890,108 @@ private:
     }
 
     void applyTheme(const QString &theme) {
-        QString styleSheet;
-        
-        if (theme == "light") {
-            styleSheet = R"(
-                QMainWindow {
-                    background-color: #f5f5f7;
-                }
-                QWidget {
-                    background-color: #f5f5f7;
-                    color: #1d1d1f;
-                    font-family: "Open Sans";
-                }
-                QGroupBox {
-                    font-weight: 600;
-                    font-size: 16px;
-                    color: #1d1d1f;
-                    border: 2px solid #e5e5e7;
-                    border-radius: 12px;
-                    margin-top: 12px;
-                    padding-top: 12px;
-                    background-color: #ffffff;
-                }
-                QGroupBox::title {
-                    subcontrol-origin: margin;
-                    left: 16px;
-                    padding: 4px 12px;
-                    background-color: #e5e5e7;
-                    border: 2px solid #d1d1d6;
-                    border-radius: 6px;
-                }
-                QPushButton {
-                    background-color: #007aff;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 10px 20px;
-                    font-weight: 600;
-                    font-size: 16px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    background-color: #0051d5;
-                }
-                QPushButton:pressed {
-                    background-color: #0040a8;
-                }
-                QPushButton:disabled {
-                    background-color: #c7c7cc;
-                    color: #8e8e93;
-                }
-                QComboBox {
-                    background-color: #e5e5e7;
-                    border: 2px solid #d1d1d6;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                    min-height: 20px;
-                    font-size: 16px;
-                }
-                QComboBox:hover {
-                    border-color: #007aff;
-                }
-                QComboBox::drop-down {
-                    border: none;
-                    width: 30px;
-                }
-                QComboBox::down-arrow {
-                    image: none;
-                    border-left: 5px solid transparent;
-                    border-right: 5px solid transparent;
-                    border-top: 6px solid #1d1d1f;
-                    width: 0;
-                    height: 0;
-                }
-                QComboBox QAbstractItemView {
-                    background-color: #e5e5e7;
-                    border: 2px solid #d1d1d6;
-                    border-radius: 8px;
-                    selection-background-color: #007aff;
-                    selection-color: white;
-                    outline: none;
-                }
-                QComboBox QAbstractItemView::item {
-                    padding: 8px 12px;
-                    min-height: 24px;
-                }
-                QComboBox QAbstractItemView::item:hover {
-                    background-color: #007aff;
-                    color: white;
-                }
-                QComboBox QAbstractItemView::item:selected {
-                    background-color: #007aff;
-                    color: white;
-                }
-                QCheckBox {
-                    font-size: 16px;
-                    spacing: 8px;
-                }
-                QCheckBox::indicator {
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid #c7c7cc;
-                    border-radius: 4px;
-                    background-color: #ffffff;
-                }
-                QCheckBox::indicator:hover {
-                    border-color: #007aff;
-                }
-                QCheckBox::indicator:checked {
-                    background-color: #007aff;
-                    border-color: #007aff;
-                    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOSIgdmlld0JveD0iMCAwIDEyIDkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDQuNUw0LjUgOEwxMSAxIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=);
-                }
-                QProgressBar {
-                    border: none;
-                    border-radius: 8px;
-                    background-color: #e5e5e7;
-                    height: 8px;
-                    text-align: center;
-                }
-                QProgressBar::chunk {
-                    background-color: #007aff;
-                    border-radius: 8px;
-                }
-                QTextEdit {
-                    background-color: #ffffff;
-                    color: #1d1d1f;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 8px;
-                    font-family: "Roboto Mono";
-                    font-size: 14px;
-                }
-                QLabel {
-                    font-size: 16px;
-                }
-                QGroupBox QLabel {
-                    background-color: transparent;
-                }
-                QGroupBox QCheckBox {
-                    background-color: transparent;
-                }
-            )";
-        } else { // dark theme
-            styleSheet = R"(
-                QMainWindow {
-                    background-color: #1c1c1e;
-                }
-                QWidget {
-                    background-color: #1c1c1e;
-                    color: #f5f5f7;
-                    font-family: "Open Sans";
-                }
-                QGroupBox {
-                    font-weight: 600;
-                    font-size: 16px;
-                    color: #f5f5f7;
-                    border: 2px solid #38383a;
-                    border-radius: 12px;
-                    margin-top: 12px;
-                    padding-top: 12px;
-                    background-color: #2c2c2e;
-                }
-                QGroupBox::title {
-                    subcontrol-origin: margin;
-                    left: 16px;
-                    padding: 4px 12px;
-                    background-color: #48484a;
-                    border: 2px solid #545458;
-                    border-radius: 6px;
-                }
-                QPushButton {
-                    background-color: #0a84ff;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 10px 20px;
-                    font-weight: 600;
-                    font-size: 16px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    background-color: #409cff;
-                }
-                QPushButton:pressed {
-                    background-color: #0051d5;
-                }
-                QPushButton:disabled {
-                    background-color: #3a3a3c;
-                    color: #636366;
-                }
-                QComboBox {
-                    background-color: #48484a;
-                    border: 2px solid #545458;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                    min-height: 20px;
-                    font-size: 16px;
-                    color: #f5f5f7;
-                }
-                QComboBox:hover {
-                    border-color: #0a84ff;
-                }
-                QComboBox::drop-down {
-                    border: none;
-                    width: 30px;
-                }
-                QComboBox::down-arrow {
-                    image: none;
-                    border-left: 5px solid transparent;
-                    border-right: 5px solid transparent;
-                    border-top: 6px solid #f5f5f7;
-                    width: 0;
-                    height: 0;
-                }
-                QComboBox QAbstractItemView {
-                    background-color: #48484a;
-                    border: 2px solid #545458;
-                    border-radius: 8px;
-                    selection-background-color: #0a84ff;
-                    selection-color: white;
-                    color: #f5f5f7;
-                    outline: none;
-                }
-                QComboBox QAbstractItemView::item {
-                    padding: 8px 12px;
-                    min-height: 24px;
-                }
-                QComboBox QAbstractItemView::item:hover {
-                    background-color: #0a84ff;
-                    color: white;
-                }
-                QComboBox QAbstractItemView::item:selected {
-                    background-color: #0a84ff;
-                    color: white;
-                }
-                QCheckBox {
-                    font-size: 16px;
-                    spacing: 8px;
-                    color: #f5f5f7;
-                }
-                QCheckBox::indicator {
-                    width: 20px;
-                    height: 20px;
-                    border: 2px solid #636366;
-                    border-radius: 4px;
-                    background-color: #2c2c2e;
-                }
-                QCheckBox::indicator:hover {
-                    border-color: #0a84ff;
-                }
-                QCheckBox::indicator:checked {
-                    background-color: #0a84ff;
-                    border-color: #0a84ff;
-                    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOSIgdmlld0JveD0iMCAwIDEyIDkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDQuNUw0LjUgOEwxMSAxIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4=);
-                }
-                QProgressBar {
-                    border: none;
-                    border-radius: 8px;
-                    background-color: #38383a;
-                    height: 8px;
-                    text-align: center;
-                }
-                QProgressBar::chunk {
-                    background-color: #0a84ff;
-                    border-radius: 8px;
-                }
-                QTextEdit {
-                    background-color: #000000;
-                    color: #f5f5f7;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 8px;
-                    font-family: "Roboto Mono";
-                    font-size: 14px;
-                }
-                QLabel {
-                    font-size: 16px;
-                }
-                QGroupBox QLabel {
-                    background-color: transparent;
-                }
-                QGroupBox QCheckBox {
-                    background-color: transparent;
-                }
-            )";
-        }
-        
+        bool isLight = (theme == "light");
+
+        // select colors based on theme
+        QString bg = isLight ? LIGHT_BG : DARK_BG;
+        QString text = isLight ? LIGHT_TEXT : DARK_TEXT;
+        QString textSubtle = isLight ? LIGHT_TEXT_SUBTLE : DARK_TEXT_SUBTLE;
+        QString groupBg = isLight ? LIGHT_GROUP_BG : DARK_GROUP_BG;
+        QString border = isLight ? LIGHT_BORDER : DARK_BORDER;
+        QString borderDark = isLight ? LIGHT_BORDER_DARK : DARK_BORDER_LIGHT;
+        QString titleBg = isLight ? LIGHT_TITLE_BG : DARK_TITLE_BG;
+        QString titleBorder = isLight ? LIGHT_TITLE_BORDER : DARK_TITLE_BORDER;
+        QString accent = isLight ? LIGHT_ACCENT : DARK_ACCENT;
+        QString comboBg = isLight ? LIGHT_COMBO_BG : DARK_COMBO_BG;
+        QString comboBorder = isLight ? LIGHT_COMBO_BORDER : DARK_COMBO_BORDER;
+        QString checkBg = isLight ? LIGHT_CHECK_BG : DARK_CHECK_BG;
+        QString checkBorder = isLight ? LIGHT_CHECK_BORDER : DARK_CHECK_BORDER;
+        QString progressBg = isLight ? LIGHT_PROGRESS_BG : DARK_PROGRESS_BG;
+        QString consoleBg = isLight ? LIGHT_CONSOLE_BG : DARK_CONSOLE_BG;
+
+        QString styleSheet = QString(R"(
+            QMainWindow { background-color: %1; }
+            QWidget { background-color: %1; color: %2; font-family: "Open Sans"; }
+            QGroupBox {
+                font-weight: 600; font-size: )" FONT_SIZE_NORMAL R"(; color: %2;
+                border: )" BORDER_WIDTH R"( solid %3; border-radius: 12px;
+                margin-top: 12px; padding-top: 12px; background-color: %4;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin; left: )" GROUP_PADDING R"(; padding: 4px 12px;
+                background-color: %5; border: )" BORDER_WIDTH R"( solid %6;
+                border-radius: )" BORDER_RADIUS_SMALL R"(;
+            }
+            QPushButton {
+                background-color: %7; color: white; border: none;
+                border-radius: )" BORDER_RADIUS R"(; padding: )" BUTTON_PADDING R"(;
+                font-weight: 600; font-size: )" FONT_SIZE_BUTTON R"(; min-height: )" BUTTON_MIN_HEIGHT R"(;
+            }
+            QComboBox {
+                background-color: %8; border: )" BORDER_WIDTH R"( solid %9;
+                border-radius: )" BORDER_RADIUS R"(; padding: )" COMBO_PADDING R"(;
+                min-height: )" COMBO_MIN_HEIGHT R"(; font-size: )" FONT_SIZE_NORMAL R"(; color: %2;
+            }
+            QComboBox:hover { border-color: %7; }
+            QComboBox::drop-down { border: none; width: 30px; }
+            QComboBox::down-arrow {
+                image: none; border-left: 5px solid transparent;
+                border-right: 5px solid transparent; border-top: 6px solid %2; width: 0; height: 0;
+            }
+            QCheckBox { font-size: )" FONT_SIZE_NORMAL R"(; spacing: 8px; color: %2; }
+            QCheckBox::indicator {
+                width: 20px; height: 20px; border: )" BORDER_WIDTH R"( solid %10;
+                border-radius: 4px; background-color: %11;
+            }
+            QCheckBox::indicator:hover { border-color: %7; }
+            QCheckBox::indicator:checked { background-color: %7; border-color: %7; }
+            QProgressBar {
+                border: none; border-radius: )" BORDER_RADIUS R"(;
+                background-color: %12; height: )" PROGRESS_HEIGHT R"(; text-align: center;
+            }
+            QProgressBar::chunk { background-color: %7; border-radius: )" BORDER_RADIUS R"(; }
+            QTextEdit {
+                background-color: %13; color: %2; border: none;
+                border-radius: )" BORDER_RADIUS R"(; padding: 8px;
+                font-family: "Roboto Mono"; font-size: )" FONT_SIZE_SMALL R"(;
+            }
+            QLabel { font-size: )" FONT_SIZE_NORMAL R"(; }
+            QGroupBox QLabel { background-color: transparent; }
+            QGroupBox QCheckBox { background-color: transparent; }
+        )").arg(bg).arg(text).arg(border).arg(groupBg).arg(titleBg).arg(titleBorder)
+          .arg(accent).arg(comboBg).arg(comboBorder).arg(checkBorder).arg(checkBg)
+          .arg(progressBg).arg(consoleBg);
+
         qApp->setStyleSheet(styleSheet);
 
-        // Update progress label
+        // progress label
         if (m_progressLabel) {
-            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 500;")
-                .arg(theme == "light" ? "#86868b" : "#98989d"));
+            m_progressLabel->setStyleSheet(
+                QString("color: %1; font-size: " FONT_SIZE_SMALL "; font-weight: 500;").arg(textSubtle));
         }
-        
-        // Update console error colors
-        // This will be handled in onLogMessage
-        
-        // Update theme button border and text color
+
+        // theme button
         if (m_themeBtn) {
-            QString borderColor = (theme == "light") ? "#e5e5e7" : "#38383a";
-            QString textColor = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
             m_themeBtn->setStyleSheet(QString(R"(
                 QPushButton {
-                    background-color: transparent;
-                    border: 2px solid %1;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    padding: 0;
-                    color: %2;
+                    background-color: transparent; border: )" BORDER_WIDTH R"( solid %1;
+                    border-radius: )" BORDER_RADIUS R"(; font-size: )" FONT_SIZE_THEME_BTN R"(;
+                    padding: 0; color: %2;
                 }
-                QPushButton:hover {
-                    background-color: rgba(128, 128, 128, 0.2);
-                }
-            )").arg(borderColor).arg(textColor));
+                QPushButton:hover { background-color: rgba(128, 128, 128, 0.2); }
+            )").arg(border).arg(text));
         }
 
-        // Apply combo box list view styling
+        // combo list view
         if (m_sizeListView) {
-            QString listBg = (theme == "light") ? "#e5e5e7" : "#48484a";
-            QString hoverColor = (theme == "light") ? "#007aff" : "#0a84ff";
-            QString textColor = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
             m_sizeListView->setStyleSheet(QString(R"(
-                QListView {
-                    background-color: %1;
-                    outline: none;
-                }
-                QListView::item {
-                    padding: 8px 12px;
-                    min-height: 24px;
-                    color: %3;
-                }
-                QListView::item:hover {
-                    background-color: %2;
-                    color: white;
-                }
-                QListView::item:selected {
-                    background-color: %2;
-                    color: white;
-                }
-            )").arg(listBg).arg(hoverColor).arg(textColor));
+                QListView { background-color: %1; outline: none; }
+                QListView::item { padding: )" LISTVIEW_PADDING R"(; min-height: )" LISTVIEW_MIN_HEIGHT R"(; color: %3; }
+                QListView::item:hover { background-color: %2; color: white; }
+                QListView::item:selected { background-color: %2; color: white; }
+            )").arg(comboBg).arg(accent).arg(text));
         }
 
-        // Apply custom button colors
         applyButtonColors(theme);
     }
     
