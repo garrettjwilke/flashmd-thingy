@@ -1,0 +1,37 @@
+name: build windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-qt6-base
+            mingw-w64-x86_64-libusb
+            mingw-w64-x86_64-pkg-config
+
+      - name: build
+        shell: msys2 {0}
+        run: |
+          mingw32-make
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flashmd-windows
+          path: |
+            flashmd.exe
+            flashmd-gui.exe
