@@ -650,14 +650,13 @@ private:
         sizeLayout->setSpacing(8);
         sizeLayout->addWidget(new QLabel("Size:"));
         m_sizeCombo = new QComboBox();
-        m_sizeCombo->setFixedWidth(400);
+        m_sizeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         m_sizeListView = new QListView(m_sizeCombo);
         m_sizeCombo->setView(m_sizeListView);
         for (int i = 0; i < 7; i++) {
             m_sizeCombo->addItem(SIZE_LABELS[i]);
         }
-        sizeLayout->addWidget(m_sizeCombo);
-        sizeLayout->addStretch();
+        sizeLayout->addWidget(m_sizeCombo, 1);
         romMainLayout->addLayout(sizeLayout);
 
         /* Buttons in a grid layout */
@@ -713,22 +712,18 @@ private:
         progressLayout->addWidget(m_progressLabel);
         mainLayout->addLayout(progressLayout);
 
-        /* Add stretch to push console to bottom */
-        mainLayout->addStretch(1);
-
         /* Console section */
         QGroupBox *consoleGroup = new QGroupBox("Console Output");
-        consoleGroup->setFixedHeight(160);
         QVBoxLayout *consoleLayout = new QVBoxLayout(consoleGroup);
-        consoleLayout->setSpacing(0);
-        consoleLayout->setContentsMargins(16, 8, 16, 12);
+        consoleLayout->setContentsMargins(16, 16, 16, 12);
 
         m_console = new QTextEdit();
         m_console->setReadOnly(true);
-        m_console->setFixedHeight(108);
+        m_console->setMinimumHeight(100);
+        m_console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         consoleLayout->addWidget(m_console);
-        
-        mainLayout->addWidget(consoleGroup, 0);
+
+        mainLayout->addWidget(consoleGroup, 1);
 
         /* Bottom buttons */
         QHBoxLayout *bottomLayout = new QHBoxLayout();
