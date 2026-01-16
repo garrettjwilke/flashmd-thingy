@@ -439,6 +439,7 @@ public:
         applyTheme(m_currentTheme);
 
         setMinimumSize(550, 865);
+        setMaximumSize(550, 865);
         resize(550, 865);
 
         log("flashmd-thingy");
