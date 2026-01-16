@@ -437,8 +437,8 @@ public:
         setupWorker();
         applyTheme(m_currentTheme);
         
-        setMinimumSize(550, 700);
-        resize(550, 700);
+        setMinimumSize(550, 860);
+        resize(550, 860);
 
         log("flashmd-thingy");
     }
@@ -626,39 +626,12 @@ private:
         mainLayout->setSpacing(16);
         mainLayout->setContentsMargins(20, 20, 20, 20);
 
-        /* Title section with theme toggle */
-        QHBoxLayout *titleLayout = new QHBoxLayout();
-        QVBoxLayout *titleTextLayout = new QVBoxLayout();
-        m_titleLabel = new QLabel("flashmd-thingy");
-        m_subtitleLabel = new QLabel("Sega Genesis ROM Flasher");
-        titleTextLayout->addWidget(m_titleLabel);
-        titleTextLayout->addWidget(m_subtitleLabel);
-        titleTextLayout->setSpacing(4);
-        titleLayout->addLayout(titleTextLayout);
-        titleLayout->addStretch();
-        
-        // Theme toggle button
-        m_themeBtn = new QPushButton();
-        // Use Unicode symbols that work better across platforms
-        m_themeBtn->setText(m_currentTheme == "dark" ? "☀" : "☾");
-        m_themeBtn->setToolTip("Toggle theme");
-        m_themeBtn->setFixedSize(40, 40);
-        m_themeBtn->setStyleSheet(R"(
-            QPushButton {
-                background-color: transparent;
-                border: 2px solid;
-                border-radius: 8px;
-                font-size: 20px;
-                padding: 0;
-            }
-            QPushButton:hover {
-                background-color: rgba(128, 128, 128, 0.2);
-            }
-        )");
-        connect(m_themeBtn, &QPushButton::clicked, this, &MainWindow::onThemeChanged);
-        titleLayout->addWidget(m_themeBtn);
-        
-        mainLayout->addLayout(titleLayout);
+        /* Logo section */
+        m_logoLabel = new QLabel();
+        QPixmap logo(":/images/logo.png");
+        m_logoLabel->setPixmap(logo);
+        m_logoLabel->setAlignment(Qt::AlignCenter);
+        mainLayout->addWidget(m_logoLabel);
 
         /* ROM Operations section */
         QGroupBox *romGroup = new QGroupBox("ROM Operations");
@@ -758,6 +731,26 @@ private:
 
         m_verboseCheck = new QCheckBox("Verbose");
         bottomLayout->addWidget(m_verboseCheck);
+
+        // Theme toggle button
+        m_themeBtn = new QPushButton();
+        m_themeBtn->setText(m_currentTheme == "dark" ? "☀" : "☾");
+        m_themeBtn->setToolTip("Toggle theme");
+        m_themeBtn->setFixedSize(32, 32);
+        m_themeBtn->setStyleSheet(R"(
+            QPushButton {
+                background-color: transparent;
+                border: 2px solid;
+                border-radius: 8px;
+                font-size: 16px;
+                padding: 0;
+            }
+            QPushButton:hover {
+                background-color: rgba(128, 128, 128, 0.2);
+            }
+        )");
+        connect(m_themeBtn, &QPushButton::clicked, this, &MainWindow::onThemeChanged);
+        bottomLayout->addWidget(m_themeBtn);
 
         mainLayout->addLayout(bottomLayout);
     }
@@ -933,17 +926,7 @@ private:
           .arg(isLight ? "#ffffff" : "#000000").arg(blueColor);
         
         qApp->setStyleSheet(grayStyleSheet);
-        
-        // Update title and subtitle to gray
-        if (m_titleLabel) {
-            m_titleLabel->setStyleSheet(QString("font-size: 28px; font-weight: 700; color: %1;")
-                .arg(grayText));
-        }
-        if (m_subtitleLabel) {
-            m_subtitleLabel->setStyleSheet(QString("color: %1; font-size: 14px;")
-                .arg(grayText));
-        }
-        
+
         // Update progress label to gray
         if (m_progressLabel) {
             m_progressLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 500;")
@@ -957,7 +940,7 @@ private:
                     background-color: transparent;
                     border: 2px solid %1;
                     border-radius: 8px;
-                    font-size: 20px;
+                    font-size: 16px;
                     padding: 0;
                     color: %1;
                 }
@@ -1274,17 +1257,7 @@ private:
         }
         
         qApp->setStyleSheet(styleSheet);
-        
-        // Update title styling
-        if (m_titleLabel) {
-            m_titleLabel->setStyleSheet(QString("font-size: 28px; font-weight: 700; color: %1;")
-                .arg(theme == "light" ? "#1d1d1f" : "#f5f5f7"));
-        }
-        if (m_subtitleLabel) {
-            m_subtitleLabel->setStyleSheet(QString("color: %1; font-size: 14px;")
-                .arg(theme == "light" ? "#86868b" : "#98989d"));
-        }
-        
+
         // Update progress label
         if (m_progressLabel) {
             m_progressLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 500;")
@@ -1303,7 +1276,7 @@ private:
                     background-color: transparent;
                     border: 2px solid %1;
                     border-radius: 8px;
-                    font-size: 20px;
+                    font-size: 16px;
                     padding: 0;
                     color: %2;
                 }
@@ -1368,8 +1341,7 @@ private:
     }
 
     UsbWorker *m_worker;
-    QLabel *m_titleLabel;
-    QLabel *m_subtitleLabel;
+    QLabel *m_logoLabel;
     QPushButton *m_themeBtn;
     QPushButton *m_writeRomBtn;
     QPushButton *m_readRomBtn;

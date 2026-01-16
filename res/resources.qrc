@@ -4,4 +4,7 @@
         <file>opensans.ttf</file>
         <file>mono.ttf</file>
     </qresource>
+    <qresource prefix="/images">
+        <file>logo.png</file>
+    </qresource>
 </RCC>

@@ -50,7 +50,7 @@ gui: $(QT_TARGET)
 src/moc_flashmd_qt.cpp: $(QT_SRC)
 	$(QT_MOC) $(QT_SRC) -o src/moc_flashmd_qt.cpp
 
-src/qrc_resources.cpp: res/resources.qrc res/opensans.ttf res/mono.ttf
+src/qrc_resources.cpp: res/resources.qrc res/opensans.ttf res/mono.ttf res/logo.png
 	$(QT_RCC) res/resources.qrc -o src/qrc_resources.cpp
 
 src/flashmd_core_qt.o: $(CORE_SRC)
