@@ -122,6 +122,34 @@ static int should_filter_message(const flashmd_config_t *config, const char *msg
 }
 
 /*
+ * Check if data is just a progress dot (possibly with newline)
+ */
+static int is_progress_dot(const char *data, size_t len) {
+    if (len == 0 || !data) return 0;
+    if (data[0] != '.') return 0;
+
+    /* Check if rest is just whitespace/newlines */
+    for (size_t i = 1; i < len; i++) {
+        if (data[i] != '\r' && data[i] != '\n' && data[i] != ' ') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/*
+ * Fix firmware typo: ERASEING -> ERASING
+ */
+static void fix_firmware_typos(char *str) {
+    char *pos;
+    while ((pos = strstr(str, "ERASEING")) != NULL) {
+        /* ERASEING -> ERASING: remove the extra 'E' at position 4 */
+        /* Shift "ING..." over the 'E' to get "ERASING" */
+        memmove(pos + 4, pos + 5, strlen(pos + 5) + 1);
+    }
+}
+
+/*
  * Print filtered output
  */
 static void print_filtered(const flashmd_config_t *config, const char *data, size_t len) {
@@ -135,8 +163,21 @@ static void print_filtered(const flashmd_config_t *config, const char *data, siz
     memcpy(temp, data, len);
     temp[len] = '\0';
 
+    /* Fix firmware typos before output */
+    fix_firmware_typos(temp);
+
     if (!should_filter_message(config, temp)) {
-        emit_msg(config, 0, "%s", temp);
+        /* Handle progress dots specially - print without newline */
+        if (is_progress_dot(temp, len)) {
+            if (config && config->message) {
+                config->message(".", 0, config->user_data);
+            } else {
+                printf(".");
+                fflush(stdout);
+            }
+        } else {
+            emit_msg(config, 0, "%s", temp);
+        }
     }
 
     free(temp);
@@ -427,7 +468,7 @@ const char *flashmd_error_string(flashmd_result_t result) {
  * Device Commands
  */
 flashmd_result_t flashmd_connect(const flashmd_config_t *config) {
-    emit_msg(config, 0, "Connecting to FlashMaster MD Dumper...\n");
+    emit_msg(config, 0, "Connecting to flashmd-thingy...\n");
 
     if (send_command(CMD_CONNECT, NULL, 0) < 0) {
         return FLASHMD_ERR_IO;
@@ -504,7 +545,7 @@ flashmd_result_t flashmd_erase(uint32_t size_kb, const flashmd_config_t *config)
     }
 
     if (size_kb == 0) {
-        emit_msg(config, 0, "Performing full chip erase (this may take 1-2 minutes)...\n");
+        emit_msg(config, 0, "Performing full chip erase...\n");
         if (send_command(CMD_FULL_ERASE, NULL, 0) < 0) {
             return FLASHMD_ERR_IO;
         }

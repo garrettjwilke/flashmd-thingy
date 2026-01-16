@@ -31,6 +31,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QFileInfo>
+#include <QFontDatabase>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -597,7 +598,14 @@ private slots:
         if (isError) {
             m_console->append("<span style='color: " + errorColor + ";'>" + message.toHtmlEscaped() + "</span>");
         } else {
-            m_console->append(message.toHtmlEscaped());
+            /* Handle progress dots specially - append inline without newline */
+            if (message == ".") {
+                m_console->moveCursor(QTextCursor::End);
+                m_console->insertPlainText(".");
+                m_console->moveCursor(QTextCursor::End);
+            } else {
+                m_console->append(message.toHtmlEscaped());
+            }
         }
     }
 
@@ -798,7 +806,7 @@ private:
             QWidget {
                 background-color: %1;
                 color: %2;
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                font-family: "Open Sans";
             }
             QGroupBox {
                 font-weight: 600;
@@ -905,7 +913,7 @@ private:
                 border: none;
                 border-radius: 8px;
                 padding: 8px;
-                font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
+                font-family: "Roboto Mono";
                 font-size: 12px;
             }
             QLabel {
@@ -1018,7 +1026,7 @@ private:
                 QWidget {
                     background-color: #f5f5f7;
                     color: #1d1d1f;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-family: "Open Sans";
                 }
                 QGroupBox {
                     font-weight: 600;
@@ -1122,7 +1130,7 @@ private:
                     border: none;
                     border-radius: 8px;
                     padding: 8px;
-                    font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
+                    font-family: "Roboto Mono";
                     font-size: 12px;
                 }
                 QLabel {
@@ -1143,7 +1151,7 @@ private:
                 QWidget {
                     background-color: #1c1c1e;
                     color: #f5f5f7;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    font-family: "Open Sans";
                 }
                 QGroupBox {
                     font-weight: 600;
@@ -1250,7 +1258,7 @@ private:
                     border: none;
                     border-radius: 8px;
                     padding: 8px;
-                    font-family: "SF Mono", "Monaco", "Cascadia Code", "Roboto Mono", monospace;
+                    font-family: "Roboto Mono";
                     font-size: 12px;
                 }
                 QLabel {
@@ -1439,6 +1447,19 @@ int main(int argc, char *argv[]) {
 
     QApplication app(argc, argv);
     app.setStyle(QStyleFactory::create("Fusion"));
+
+    /* Load embedded fonts */
+    int fontId = QFontDatabase::addApplicationFont(":/fonts/opensans.ttf");
+    if (fontId != -1) {
+        QStringList fontFamilies = QFontDatabase::applicationFontFamilies(fontId);
+        if (!fontFamilies.isEmpty()) {
+            QFont defaultFont(fontFamilies.first(), 13);
+            app.setFont(defaultFont);
+        }
+    }
+
+    /* Load mono font for console */
+    QFontDatabase::addApplicationFont(":/fonts/mono.ttf");
 
     MainWindow window;
     window.show();

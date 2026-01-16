@@ -18,6 +18,7 @@ INCLUDES = -Isrc
 ifeq ($(UNAME_S),Darwin)
     # macOS with Homebrew - try Qt6 first, then Qt5
     QT_MOC = $(shell find /opt/homebrew/Cellar/qtbase -name "moc" -type f 2>/dev/null | head -1)
+    QT_RCC = $(shell find /opt/homebrew/Cellar/qtbase -name "rcc" -type f 2>/dev/null | head -1)
     QT_CFLAGS = $(shell pkg-config --cflags Qt6Widgets 2>/dev/null || pkg-config --cflags Qt5Widgets 2>/dev/null)
     QT_LDFLAGS = $(shell pkg-config --libs Qt6Widgets 2>/dev/null || pkg-config --libs Qt5Widgets 2>/dev/null)
 else
@@ -25,6 +26,7 @@ else
     QT_CFLAGS = $(shell pkg-config --cflags Qt5Widgets 2>/dev/null || pkg-config --cflags Qt6Widgets 2>/dev/null)
     QT_LDFLAGS = $(shell pkg-config --libs Qt5Widgets 2>/dev/null || pkg-config --libs Qt6Widgets 2>/dev/null)
     QT_MOC = $(shell which moc-qt5 2>/dev/null || which moc 2>/dev/null || echo "moc")
+    QT_RCC = $(shell which rcc-qt5 2>/dev/null || which rcc 2>/dev/null || echo "rcc")
 endif
 
 # Targets
@@ -48,14 +50,17 @@ gui: $(QT_TARGET)
 src/moc_flashmd_qt.cpp: $(QT_SRC)
 	$(QT_MOC) $(QT_SRC) -o src/moc_flashmd_qt.cpp
 
+src/qrc_resources.cpp: res/resources.qrc res/opensans.ttf res/mono.ttf
+	$(QT_RCC) res/resources.qrc -o src/qrc_resources.cpp
+
 src/flashmd_core_qt.o: $(CORE_SRC)
 	$(CC) $(CFLAGS) $(CFLAGS_USB) $(INCLUDES) -c -o $@ $(CORE_SRC)
 
-$(QT_TARGET): src/flashmd_core_qt.o $(QT_SRC) src/moc_flashmd_qt.cpp
-	g++ -std=c++17 $(CFLAGS) $(CFLAGS_USB) $(QT_CFLAGS) $(INCLUDES) -fPIC -o $@ src/flashmd_core_qt.o $(QT_SRC) $(LDFLAGS_USB) $(QT_LDFLAGS)
+$(QT_TARGET): src/flashmd_core_qt.o $(QT_SRC) src/moc_flashmd_qt.cpp src/qrc_resources.cpp
+	g++ -std=c++17 $(CFLAGS) $(CFLAGS_USB) $(QT_CFLAGS) $(INCLUDES) -fPIC -o $@ src/flashmd_core_qt.o $(QT_SRC) src/qrc_resources.cpp $(LDFLAGS_USB) $(QT_LDFLAGS)
 
 clean:
-	rm -f $(CLI_TARGET) $(QT_TARGET) src/moc_flashmd_qt.cpp src/flashmd_core_qt.o
+	rm -f $(CLI_TARGET) $(QT_TARGET) src/moc_flashmd_qt.cpp src/flashmd_core_qt.o src/qrc_resources.cpp
 
 help:
 	@echo "FlashMD Build Targets:"
