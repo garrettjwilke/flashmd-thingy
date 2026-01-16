@@ -26,6 +26,10 @@ jobs:
       - name: build
         shell: msys2 {0}
         run: |
+          # Ensure Qt tools are in PATH
+          export PATH="/mingw64/bin:$PATH"
+          which moc || echo "moc not found in PATH"
+          which rcc || echo "rcc not found in PATH"
           mingw32-make
 
       - name: upload artifacts
