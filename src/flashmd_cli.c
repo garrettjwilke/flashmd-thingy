@@ -112,10 +112,19 @@ int main(int argc, char *argv[]) {
         else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--no-trim") == 0) {
             no_trim = 1;
         }
-        else if (argv[i][0] != '-') {
+        else if (strcmp(argv[i], "connect") == 0 || strcmp(argv[i], "id") == 0 || strcmp(argv[i], "clear") == 0) {
             if (!legacy_command) {
                 legacy_command = argv[i];
+            } else {
+                fprintf(stderr, "Error: Multiple commands specified\n");
+                print_usage(argv[0]);
+                return 1;
             }
+        }
+        else {
+            fprintf(stderr, "Error: Unknown argument '%s'\n", argv[i]);
+            print_usage(argv[0]);
+            return 1;
         }
     }
 
@@ -126,29 +135,28 @@ int main(int argc, char *argv[]) {
     config.no_trim = no_trim;
     /* Use NULL callbacks = default to printf */
 
+    /* Check for conflicting commands */
+    if (legacy_command && (do_read || do_write || do_erase)) {
+        fprintf(stderr, "Error: Cannot combine '%s' with -r, -w, or -e\n", legacy_command);
+        print_usage(argv[0]);
+        return 1;
+    }
+
     /* Support legacy command format */
-    if (legacy_command && !do_read && !do_write && !do_erase) {
+    if (legacy_command) {
         flashmd_result_t r = flashmd_open();
         if (r != FLASHMD_OK) {
             fprintf(stderr, "Could not open USB device: %s\n", flashmd_error_string(r));
             return 1;
         }
 
-        flashmd_result_t result = FLASHMD_OK;
+        flashmd_result_t result;
         if (strcmp(legacy_command, "connect") == 0) {
             result = flashmd_connect(&config);
-        }
-        else if (strcmp(legacy_command, "id") == 0) {
+        } else if (strcmp(legacy_command, "id") == 0) {
             result = flashmd_check_id(&config);
-        }
-        else if (strcmp(legacy_command, "clear") == 0) {
+        } else {
             result = flashmd_clear_buffer(&config);
-        }
-        else {
-            fprintf(stderr, "Unknown command: %s\n", legacy_command);
-            print_usage(argv[0]);
-            flashmd_close();
-            return 1;
         }
         flashmd_close();
         return (result == FLASHMD_OK) ? 0 : 1;
