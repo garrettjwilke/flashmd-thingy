@@ -8,7 +8,8 @@ UNAME_S := $(shell uname -s)
 ifeq ($(OS),Windows_NT)
     IS_WINDOWS = 1
 else
-    ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+    # MSYS2/MinGW systems report something like MINGW64_NT-10.0
+    ifneq ($(filter MINGW%,$(UNAME_S)),)
         IS_WINDOWS = 1
     endif
 endif
@@ -26,9 +27,10 @@ ifdef IS_WINDOWS
     # Windows/MSYS2 - Qt6 via pkg-config
     QT_CFLAGS = $(shell pkg-config --cflags Qt6Widgets 2>/dev/null || pkg-config --cflags Qt5Widgets 2>/dev/null)
     QT_LDFLAGS = $(shell pkg-config --libs Qt6Widgets 2>/dev/null || pkg-config --libs Qt5Widgets 2>/dev/null)
-    # Try full path first, then fallback to just moc/rcc (rely on PATH in MSYS2)
-    QT_MOC = $(shell [ -x /mingw64/bin/moc ] && echo /mingw64/bin/moc || echo moc)
-    QT_RCC = $(shell [ -x /mingw64/bin/rcc ] && echo /mingw64/bin/rcc || echo rcc)
+    # In MSYS2, Qt tools from mingw-w64-x86_64-qt6-base are in /mingw64/bin/
+    # Use full path directly for reliability (mingw32-make might not have moc in PATH)
+    QT_MOC = /mingw64/bin/moc
+    QT_RCC = /mingw64/bin/rcc
 else ifeq ($(UNAME_S),Darwin)
     # macOS with Homebrew - try Qt6 first, then Qt5
     QT_MOC = $(shell find /opt/homebrew/Cellar/qtbase -name "moc" -type f 2>/dev/null | head -1)
@@ -37,10 +39,12 @@ else ifeq ($(UNAME_S),Darwin)
     QT_LDFLAGS = $(shell pkg-config --libs Qt6Widgets 2>/dev/null || pkg-config --libs Qt5Widgets 2>/dev/null)
 else
     # Linux - try Qt5 first (more common), then Qt6
+    # Also check for MSYS2 paths as fallback (in case Windows detection failed)
     QT_CFLAGS = $(shell pkg-config --cflags Qt5Widgets 2>/dev/null || pkg-config --cflags Qt6Widgets 2>/dev/null)
     QT_LDFLAGS = $(shell pkg-config --libs Qt5Widgets 2>/dev/null || pkg-config --libs Qt6Widgets 2>/dev/null)
-    QT_MOC = $(shell which moc-qt5 2>/dev/null || which moc 2>/dev/null || echo "moc")
-    QT_RCC = $(shell which rcc-qt5 2>/dev/null || which rcc 2>/dev/null || echo "rcc")
+    # Check MSYS2 path first, then try which/command
+    QT_MOC = $(shell test -x /mingw64/bin/moc && echo /mingw64/bin/moc || which moc-qt5 2>/dev/null || which moc 2>/dev/null || echo "moc")
+    QT_RCC = $(shell test -x /mingw64/bin/rcc && echo /mingw64/bin/rcc || which rcc-qt5 2>/dev/null || which rcc 2>/dev/null || echo "rcc")
 endif
 
 # Targets
