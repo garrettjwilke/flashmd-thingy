@@ -814,9 +814,11 @@ private:
             QGroupBox::title {
                 subcontrol-origin: margin;
                 left: 16px;
-                padding: 0 8px;
+                padding: 4px 12px;
                 background-color: %5;
                 color: %3;
+                border: 2px solid %4;
+                border-radius: 6px;
             }
             QPushButton {
                 background-color: %4 !important;
@@ -1024,8 +1026,10 @@ private:
                 QGroupBox::title {
                     subcontrol-origin: margin;
                     left: 16px;
-                    padding: 0 8px;
+                    padding: 4px 12px;
                     background-color: #ffffff;
+                    border: 2px solid #e5e5e7;
+                    border-radius: 6px;
                 }
                 QPushButton {
                     background-color: #007aff;
@@ -1149,8 +1153,10 @@ private:
                 QGroupBox::title {
                     subcontrol-origin: margin;
                     left: 16px;
-                    padding: 0 8px;
+                    padding: 4px 12px;
                     background-color: #2c2c2e;
+                    border: 2px solid #38383a;
+                    border-radius: 6px;
                 }
                 QPushButton {
                     background-color: #0a84ff;
