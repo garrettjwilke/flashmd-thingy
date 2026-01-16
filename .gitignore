@@ -4,5 +4,6 @@ flashmd-legacy
 flashmd-qt
 src/flashmd_core_qt.o
 src/moc_flashmd_qt.cpp
+src/qrc_resources.cpp
 original.bin
 dump.bin
