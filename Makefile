@@ -27,9 +27,9 @@ ifdef IS_WINDOWS
     # Windows/MSYS2 - Qt6 via pkg-config
     QT_CFLAGS = $(shell pkg-config --cflags Qt6Widgets 2>/dev/null || pkg-config --cflags Qt5Widgets 2>/dev/null)
     QT_LDFLAGS = $(shell pkg-config --libs Qt6Widgets 2>/dev/null || pkg-config --libs Qt5Widgets 2>/dev/null)
-    # Find Qt tools - try which first, then common paths
-    QT_MOC = $(shell which moc 2>/dev/null || command -v moc 2>/dev/null || echo moc)
-    QT_RCC = $(shell which rcc 2>/dev/null || command -v rcc 2>/dev/null || echo rcc)
+    # Qt6 tools are in /mingw64/share/qt6/bin in MSYS2
+    QT_MOC = /mingw64/share/qt6/bin/moc
+    QT_RCC = /mingw64/share/qt6/bin/rcc
 else ifeq ($(UNAME_S),Darwin)
     # macOS with Homebrew - try Qt6 first, then Qt5
     QT_MOC = $(shell find /opt/homebrew/Cellar/qtbase -name "moc" -type f 2>/dev/null | head -1)

@@ -24,20 +24,11 @@ jobs:
             mingw-w64-x86_64-libusb
             mingw-w64-x86_64-pkg-config
 
-      - name: verify Qt tools installation
-        shell: msys2 {0}
-        run: |
-          pacman -Q mingw-w64-x86_64-qt6-tools || echo "qt6-tools not installed"
-          find /mingw64/bin -name "moc*" 2>/dev/null | head -5
-          find /mingw64/bin -name "rcc*" 2>/dev/null | head -5
-          
       - name: build
         shell: msys2 {0}
         run: |
-          # Ensure Qt tools are in PATH
-          export PATH="/mingw64/bin:$PATH"
-          which moc || (find /mingw64 -name "moc*" -type f -executable 2>/dev/null | head -1 || echo "moc not found")
-          which rcc || (find /mingw64 -name "rcc*" -type f -executable 2>/dev/null | head -1 || echo "rcc not found")
+          # Qt6 tools are in /mingw64/share/qt6/bin, add to PATH
+          export PATH="/mingw64/share/qt6/bin:/mingw64/bin:$PATH"
           mingw32-make
 
       - name: upload artifacts
