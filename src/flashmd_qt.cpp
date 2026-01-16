@@ -32,6 +32,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFontDatabase>
+#include <QListView>
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -436,11 +437,16 @@ public:
         setupUi();
         setupWorker();
         applyTheme(m_currentTheme);
-        
+
         setMinimumSize(550, 860);
         resize(550, 860);
 
         log("flashmd-thingy");
+
+        // Reapply theme after event loop starts to fix combo box styling
+        QTimer::singleShot(0, this, [this]() {
+            applyTheme(m_currentTheme);
+        });
     }
 
 private slots:
@@ -645,6 +651,8 @@ private:
         sizeLayout->addWidget(new QLabel("Size:"));
         m_sizeCombo = new QComboBox();
         m_sizeCombo->setFixedWidth(400);
+        m_sizeListView = new QListView(m_sizeCombo);
+        m_sizeCombo->setView(m_sizeListView);
         for (int i = 0; i < 7; i++) {
             m_sizeCombo->addItem(SIZE_LABELS[i]);
         }
@@ -871,6 +879,19 @@ private:
                 selection-background-color: %4 !important;
                 selection-color: white !important;
                 color: white !important;
+                outline: none;
+            }
+            QComboBox QAbstractItemView::item {
+                padding: 8px 12px;
+                min-height: 24px;
+            }
+            QComboBox QAbstractItemView::item:hover {
+                background-color: %8 !important;
+                color: white !important;
+            }
+            QComboBox QAbstractItemView::item:selected {
+                background-color: %8 !important;
+                color: white !important;
             }
             QCheckBox {
                 font-size: 13px;
@@ -994,6 +1015,29 @@ private:
         if (m_clearBtn) {
             m_clearBtn->setStyleSheet(grayButtonStyle);
         }
+
+        // Gray out combo box list view
+        if (m_sizeListView) {
+            m_sizeListView->setStyleSheet(QString(R"(
+                QListView {
+                    background-color: %1;
+                    outline: none;
+                }
+                QListView::item {
+                    padding: 8px 12px;
+                    min-height: 24px;
+                    color: white;
+                }
+                QListView::item:hover {
+                    background-color: %1;
+                    color: white;
+                }
+                QListView::item:selected {
+                    background-color: %1;
+                    color: white;
+                }
+            )").arg(grayColor));
+        }
     }
 
     void log(const QString &message) {
@@ -1080,6 +1124,19 @@ private:
                     border-radius: 8px;
                     selection-background-color: #007aff;
                     selection-color: white;
+                    outline: none;
+                }
+                QComboBox QAbstractItemView::item {
+                    padding: 8px 12px;
+                    min-height: 24px;
+                }
+                QComboBox QAbstractItemView::item:hover {
+                    background-color: #007aff;
+                    color: white;
+                }
+                QComboBox QAbstractItemView::item:selected {
+                    background-color: #007aff;
+                    color: white;
                 }
                 QCheckBox {
                     font-size: 13px;
@@ -1209,6 +1266,19 @@ private:
                     selection-background-color: #0a84ff;
                     selection-color: white;
                     color: #f5f5f7;
+                    outline: none;
+                }
+                QComboBox QAbstractItemView::item {
+                    padding: 8px 12px;
+                    min-height: 24px;
+                }
+                QComboBox QAbstractItemView::item:hover {
+                    background-color: #0a84ff;
+                    color: white;
+                }
+                QComboBox QAbstractItemView::item:selected {
+                    background-color: #0a84ff;
+                    color: white;
                 }
                 QCheckBox {
                     font-size: 13px;
@@ -1291,7 +1361,33 @@ private:
                 }
             )").arg(borderColor).arg(textColor));
         }
-        
+
+        // Apply combo box list view styling
+        if (m_sizeListView) {
+            QString listBg = (theme == "light") ? "#e5e5e7" : "#48484a";
+            QString hoverColor = (theme == "light") ? "#007aff" : "#0a84ff";
+            QString textColor = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
+            m_sizeListView->setStyleSheet(QString(R"(
+                QListView {
+                    background-color: %1;
+                    outline: none;
+                }
+                QListView::item {
+                    padding: 8px 12px;
+                    min-height: 24px;
+                    color: %3;
+                }
+                QListView::item:hover {
+                    background-color: %2;
+                    color: white;
+                }
+                QListView::item:selected {
+                    background-color: %2;
+                    color: white;
+                }
+            )").arg(listBg).arg(hoverColor).arg(textColor));
+        }
+
         // Apply custom button colors
         applyButtonColors(theme);
     }
@@ -1356,6 +1452,7 @@ private:
     QPushButton *m_readSramBtn;
     QPushButton *m_clearBtn;
     QComboBox *m_sizeCombo;
+    QListView *m_sizeListView;
     QCheckBox *m_noTrimCheck;
     QCheckBox *m_fullEraseCheck;
     QCheckBox *m_verboseCheck;
