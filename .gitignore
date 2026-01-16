@@ -7,3 +7,4 @@ src/moc_flashmd_qt.cpp
 src/qrc_resources.cpp
 original.bin
 dump.bin
+*~
