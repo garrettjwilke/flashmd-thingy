@@ -438,8 +438,8 @@ public:
         setupWorker();
         applyTheme(m_currentTheme);
 
-        setMinimumSize(550, 860);
-        resize(550, 860);
+        setMinimumSize(550, 865);
+        resize(550, 865);
 
         log("flashmd-thingy");
 
@@ -709,7 +709,7 @@ private:
         m_progressBar->setValue(0);
         progressLayout->addWidget(m_progressBar, 1);
         m_progressLabel = new QLabel("0 / 0 KB");
-        m_progressLabel->setStyleSheet("color: #86868b; font-size: 12px; font-weight: 500;");
+        m_progressLabel->setStyleSheet("color: #86868b; font-size: 14px; font-weight: 500;");
         progressLayout->addWidget(m_progressLabel);
         mainLayout->addLayout(progressLayout);
 
@@ -811,7 +811,7 @@ private:
             }
             QGroupBox {
                 font-weight: 600;
-                font-size: 13px;
+                font-size: 16px;
                 color: %3;
                 border: 2px solid %4;
                 border-radius: 12px;
@@ -835,7 +835,7 @@ private:
                 border-radius: 8px;
                 padding: 10px 20px;
                 font-weight: 600;
-                font-size: 13px;
+                font-size: 16px;
                 min-height: 20px;
             }
             QPushButton:hover {
@@ -854,7 +854,7 @@ private:
                 border-radius: 8px;
                 padding: 8px 12px;
                 min-height: 20px;
-                font-size: 13px;
+                font-size: 16px;
                 color: white !important;
             }
             QComboBox:hover {
@@ -894,7 +894,7 @@ private:
                 color: white !important;
             }
             QCheckBox {
-                font-size: 13px;
+                font-size: 16px;
                 spacing: 8px;
                 color: %3 !important;
             }
@@ -930,10 +930,10 @@ private:
                 border-radius: 8px;
                 padding: 8px;
                 font-family: "Roboto Mono";
-                font-size: 12px;
+                font-size: 14px;
             }
             QLabel {
-                font-size: 13px;
+                font-size: 16px;
                 color: %3 !important;
             }
             QGroupBox QLabel {
@@ -952,7 +952,7 @@ private:
 
         // Update progress label to gray
         if (m_progressLabel) {
-            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 500;")
+            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 500;")
                 .arg(grayText));
         }
         
@@ -982,7 +982,7 @@ private:
                 border-radius: 8px;
                 padding: 10px 20px;
                 font-weight: 600;
-                font-size: 13px;
+                font-size: 16px;
                 min-height: 20px;
             }
             QPushButton:hover {
@@ -1059,7 +1059,7 @@ private:
                 }
                 QGroupBox {
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 16px;
                     color: #1d1d1f;
                     border: 2px solid #e5e5e7;
                     border-radius: 12px;
@@ -1082,7 +1082,7 @@ private:
                     border-radius: 8px;
                     padding: 10px 20px;
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 16px;
                     min-height: 20px;
                 }
                 QPushButton:hover {
@@ -1101,7 +1101,7 @@ private:
                     border-radius: 8px;
                     padding: 8px 12px;
                     min-height: 20px;
-                    font-size: 13px;
+                    font-size: 16px;
                 }
                 QComboBox:hover {
                     border-color: #007aff;
@@ -1139,7 +1139,7 @@ private:
                     color: white;
                 }
                 QCheckBox {
-                    font-size: 13px;
+                    font-size: 16px;
                     spacing: 8px;
                 }
                 QCheckBox::indicator {
@@ -1175,10 +1175,10 @@ private:
                     border-radius: 8px;
                     padding: 8px;
                     font-family: "Roboto Mono";
-                    font-size: 12px;
+                    font-size: 14px;
                 }
                 QLabel {
-                    font-size: 13px;
+                    font-size: 16px;
                 }
                 QGroupBox QLabel {
                     background-color: transparent;
@@ -1199,7 +1199,7 @@ private:
                 }
                 QGroupBox {
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 16px;
                     color: #f5f5f7;
                     border: 2px solid #38383a;
                     border-radius: 12px;
@@ -1222,7 +1222,7 @@ private:
                     border-radius: 8px;
                     padding: 10px 20px;
                     font-weight: 600;
-                    font-size: 13px;
+                    font-size: 16px;
                     min-height: 20px;
                 }
                 QPushButton:hover {
@@ -1241,7 +1241,7 @@ private:
                     border-radius: 8px;
                     padding: 8px 12px;
                     min-height: 20px;
-                    font-size: 13px;
+                    font-size: 16px;
                     color: #f5f5f7;
                 }
                 QComboBox:hover {
@@ -1281,7 +1281,7 @@ private:
                     color: white;
                 }
                 QCheckBox {
-                    font-size: 13px;
+                    font-size: 16px;
                     spacing: 8px;
                     color: #f5f5f7;
                 }
@@ -1318,10 +1318,10 @@ private:
                     border-radius: 8px;
                     padding: 8px;
                     font-family: "Roboto Mono";
-                    font-size: 12px;
+                    font-size: 14px;
                 }
                 QLabel {
-                    font-size: 13px;
+                    font-size: 16px;
                 }
                 QGroupBox QLabel {
                     background-color: transparent;
@@ -1336,7 +1336,7 @@ private:
 
         // Update progress label
         if (m_progressLabel) {
-            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 12px; font-weight: 500;")
+            m_progressLabel->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: 500;")
                 .arg(theme == "light" ? "#86868b" : "#98989d"));
         }
         
@@ -1408,7 +1408,7 @@ private:
                 border-radius: 8px;
                 padding: 10px 20px;
                 font-weight: 600;
-                font-size: 13px;
+                font-size: 16px;
                 min-height: 20px;
             }
             QPushButton:hover {
@@ -1528,7 +1528,7 @@ int main(int argc, char *argv[]) {
     if (fontId != -1) {
         QStringList fontFamilies = QFontDatabase::applicationFontFamilies(fontId);
         if (!fontFamilies.isEmpty()) {
-            QFont defaultFont(fontFamilies.first(), 13);
+            QFont defaultFont(fontFamilies.first(), 16);
             app.setFont(defaultFont);
         }
     }
