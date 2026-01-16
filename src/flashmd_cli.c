@@ -9,7 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include <unistd.h>
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <unistd.h>
+#endif
 
 static void sigint_handler(int sig) {
     (void)sig;
@@ -46,7 +50,8 @@ static void print_usage(const char *progname) {
 int main(int argc, char *argv[]) {
     signal(SIGINT, sigint_handler);
 
-    /* Get real user ID (the user who ran sudo) */
+    /* Get real user ID (the user who ran sudo) - Unix only */
+#ifndef _WIN32
     const char *sudo_uid_str = getenv("SUDO_UID");
     const char *sudo_gid_str = getenv("SUDO_GID");
 
@@ -55,6 +60,10 @@ int main(int argc, char *argv[]) {
     } else {
         flashmd_set_real_ids(getuid(), getgid());
     }
+#else
+    /* On Windows, file ownership is handled differently, so we can skip this */
+    flashmd_set_real_ids(-1, -1);
+#endif
 
     if (argc < 2) {
         print_usage(argv[0]);

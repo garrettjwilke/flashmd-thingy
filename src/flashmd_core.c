@@ -9,11 +9,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <libusb-1.0/libusb.h>
+
+/* Platform detection */
+#ifdef _WIN32
+    #include <windows.h>
+    #include <io.h>
+    #define usleep(x) Sleep((x) / 1000)
+    #define fsync(fd) _commit(fd)
+    #define ftruncate(fd, size) _chsize(fd, size)
+#else
+    #include <unistd.h>
+    #include <sys/types.h>
+    #include <sys/stat.h>
+#endif
 
 /* USB device identifiers */
 #define VENDOR_ID   0x0483  /* STMicroelectronics */
@@ -64,8 +74,13 @@ static const char *filtered_messages[] = {
 static libusb_context *ctx = NULL;
 static libusb_device_handle *dev_handle = NULL;
 static volatile int interrupted = 0;
+#ifndef _WIN32
 static uid_t real_uid = -1;
 static gid_t real_gid = -1;
+#else
+static int real_uid = -1;
+static int real_gid = -1;
+#endif
 
 /*
  * Internal helper: emit a message via callback or printf
@@ -184,25 +199,33 @@ static void print_filtered(const flashmd_config_t *config, const char *data, siz
 }
 
 /*
- * File ownership helpers
+ * File ownership helpers (Unix only - no-op on Windows)
  */
 static void fix_file_ownership_fd(int fd) {
+#ifndef _WIN32
     if (real_uid != (uid_t)-1 && real_gid != (gid_t)-1 && fd >= 0) {
         int _unused = fchown(fd, real_uid, real_gid);
         (void)_unused;
     }
+#else
+    (void)fd; /* No-op on Windows */
+#endif
 }
 
 static void fix_file_ownership(const char *filename) {
+#ifndef _WIN32
     if (real_uid != (uid_t)-1 && real_gid != (gid_t)-1) {
         int _unused = chown(filename, real_uid, real_gid);
         (void)_unused;
     }
+#else
+    (void)filename; /* No-op on Windows */
+#endif
 }
 
 void flashmd_set_real_ids(int uid, int gid) {
-    real_uid = (uid_t)uid;
-    real_gid = (gid_t)gid;
+    real_uid = uid;
+    real_gid = gid;
 }
 
 /*
@@ -790,7 +813,11 @@ flashmd_result_t flashmd_read_rom(const char *filename, uint32_t size_kb,
     }
 
     fflush(fp);
+#ifdef _WIN32
+    _commit(fileno(fp));
+#else
     fsync(fileno(fp));
+#endif
     fix_file_ownership_fd(fileno(fp));
     fclose(fp);
 
@@ -853,7 +880,11 @@ flashmd_result_t flashmd_read_sram(const char *filename, const flashmd_config_t 
     }
 
     fflush(fp);
+#ifdef _WIN32
+    _commit(fileno(fp));
+#else
     fsync(fileno(fp));
+#endif
     fix_file_ownership_fd(fileno(fp));
     fclose(fp);
 
