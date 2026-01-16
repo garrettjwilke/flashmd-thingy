@@ -36,12 +36,14 @@
 
 #include "theme.h"
 
+#ifdef __linux__
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <pwd.h>
+#endif
 #include <cstring>
 
 extern "C" {
@@ -57,6 +59,7 @@ static const char* SIZE_LABELS[] = {"Auto", "128 KB", "256 KB", "512 KB", "1 MB"
  * Stores paths in ~/.config/flashmd/config.ini
  */
 static QString getRealUserHome() {
+#ifdef __linux__
     // Get the real user's home directory (not root's if running via sudo)
     const char *homeDir = getenv("HOME");
     
@@ -85,6 +88,10 @@ static QString getRealUserHome() {
     }
     
     return homeDir ? QString::fromUtf8(homeDir) : QString();
+#else
+    // On Windows/macOS, use Qt's standard paths
+    return QStandardPaths::writableLocation(QStandardPaths::HomeLocation);
+#endif
 }
 
 static QString getConfigPath() {
@@ -1067,13 +1074,12 @@ private:
 };
 
 int main(int argc, char *argv[]) {
+#ifdef __linux__
     /* Set up file ownership for created files */
     const char *sudoUid = getenv("SUDO_UID");
     const char *sudoGid = getenv("SUDO_GID");
     uid_t realUid = sudoUid ? (uid_t)atoi(sudoUid) : getuid();
     gid_t realGid = sudoGid ? (gid_t)atoi(sudoGid) : getgid();
-
-#ifdef __linux__
     /* Privilege separation: if running as root via sudo, fork */
     if (getuid() == 0 && sudoUid && sudoGid) {
         if (pipe(g_pipeToUsb) < 0 || pipe(g_pipeToGui) < 0) {
@@ -1121,7 +1127,8 @@ int main(int argc, char *argv[]) {
         flashmd_set_real_ids(realUid, realGid);
     }
 #else
-    flashmd_set_real_ids(realUid, realGid);
+    /* On Windows, no privilege separation needed */
+    flashmd_set_real_ids(-1, -1);
 #endif
 
     QApplication app(argc, argv);
