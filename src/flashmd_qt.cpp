@@ -34,6 +34,8 @@
 #include <QFontDatabase>
 #include <QListView>
 
+#include "theme.h"
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -438,9 +440,9 @@ public:
         setupWorker();
         applyTheme(m_currentTheme);
 
-        setMinimumSize(550, 865);
-        setMaximumSize(550, 865);
-        resize(550, 865);
+        setMinimumSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        setMaximumSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        resize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
         log("flashmd-thingy");
 
@@ -720,7 +722,7 @@ private:
 
         m_console = new QTextEdit();
         m_console->setReadOnly(true);
-        m_console->setMinimumHeight(100);
+        m_console->setMinimumHeight(CONSOLE_MIN_HEIGHT);
         m_console->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         consoleLayout->addWidget(m_console);
 
@@ -737,7 +739,7 @@ private:
         m_themeBtn = new QPushButton();
         m_themeBtn->setText(m_currentTheme == "dark" ? "☀" : "☾");
         m_themeBtn->setToolTip("Toggle theme");
-        m_themeBtn->setFixedSize(32, 32);
+        m_themeBtn->setFixedSize(THEME_BTN_SIZE, THEME_BTN_SIZE);
         m_themeBtn->setStyleSheet(R"(
             QPushButton {
                 background-color: transparent;
@@ -786,7 +788,7 @@ private:
         bool isLight = (m_currentTheme == "light");
         QString bgColor = isLight ? "#f5f5f7" : "#1c1c1e";
         QString groupBg = isLight ? "#ffffff" : "#2c2c2e";
-        QString grayColor = "#808080";
+        QString grayColor = GRAY_COLOR;
         QString grayDark = "#666666";
         QString grayLight = "#999999";
         QString textColor = isLight ? "#1d1d1f" : "#f5f5f7";
@@ -971,25 +973,25 @@ private:
             QPushButton {
                 background-color: %1 !important;
                 color: white !important;
-                border: 2px solid %1 !important;
-                border-radius: 8px;
-                padding: 10px 20px;
+                border: )" BORDER_WIDTH R"( solid %1 !important;
+                border-radius: )" BORDER_RADIUS R"(;
+                padding: )" BUTTON_PADDING R"(;
                 font-weight: 600;
-                font-size: 16px;
-                min-height: 20px;
+                font-size: )" FONT_SIZE_BUTTON R"(;
+                min-height: )" BUTTON_MIN_HEIGHT R"(;
             }
             QPushButton:hover {
                 background-color: %1 !important;
-                border: 2px solid %1 !important;
+                border: )" BORDER_WIDTH R"( solid %1 !important;
             }
             QPushButton:pressed {
                 background-color: %1 !important;
-                border: 2px solid %1 !important;
+                border: )" BORDER_WIDTH R"( solid %1 !important;
             }
             QPushButton:disabled {
                 background-color: %1 !important;
                 color: white !important;
-                border: 2px solid %1 !important;
+                border: )" BORDER_WIDTH R"( solid %1 !important;
             }
         )").arg(grayColor);
         
@@ -1389,31 +1391,30 @@ private:
     }
     
     void applyButtonColors(const QString &theme) {
-        // Washed out colors
-        QString writeGreen = (theme == "light") ? "#a8d5ba" : "#4a7c5e";
-        QString readBlue = (theme == "light") ? "#a8c5d5" : "#4a6c7c";
-        QString eraseRed = (theme == "light") ? "#d5a8a8" : "#7c4a4a";
-        QString clearGray = (theme == "light") ? "#c7c7cc" : "#636366";
-        QString buttonText = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
-        QString hoverBorder = (theme == "light") ? "#1d1d1f" : "#f5f5f7";
+        QString writeColor = (theme == "light") ? LIGHT_BTN_WRITE : DARK_BTN_WRITE;
+        QString readColor = (theme == "light") ? LIGHT_BTN_READ : DARK_BTN_READ;
+        QString eraseColor = (theme == "light") ? LIGHT_BTN_ERASE : DARK_BTN_ERASE;
+        QString clearColor = (theme == "light") ? LIGHT_BTN_CLEAR : DARK_BTN_CLEAR;
+        QString buttonText = (theme == "light") ? LIGHT_BTN_TEXT : DARK_BTN_TEXT;
+        QString hoverBorder = (theme == "light") ? LIGHT_BTN_HOVER : DARK_BTN_HOVER;
 
         auto makeButtonStyle = [&](const QString &bgColor) {
             return QString(R"(
                 QPushButton {
                     background-color: %1;
                     color: %2;
-                    border: 2px solid %1;
-                    border-radius: 8px;
-                    padding: 10px 20px;
+                    border: )" BORDER_WIDTH R"( solid %1;
+                    border-radius: )" BORDER_RADIUS R"(;
+                    padding: )" BUTTON_PADDING R"(;
                     font-weight: 600;
-                    font-size: 16px;
-                    min-height: 20px;
+                    font-size: )" FONT_SIZE_BUTTON R"(;
+                    min-height: )" BUTTON_MIN_HEIGHT R"(;
                 }
                 QPushButton:hover {
-                    border: 2px solid %3;
+                    border: )" BORDER_WIDTH R"( solid %3;
                 }
                 QPushButton:pressed {
-                    border: 2px solid %3;
+                    border: )" BORDER_WIDTH R"( solid %3;
                 }
                 QPushButton:disabled {
                     opacity: 0.4;
@@ -1422,22 +1423,22 @@ private:
         };
         
         if (m_writeRomBtn) {
-            m_writeRomBtn->setStyleSheet(makeButtonStyle(writeGreen));
+            m_writeRomBtn->setStyleSheet(makeButtonStyle(writeColor));
         }
         if (m_readRomBtn) {
-            m_readRomBtn->setStyleSheet(makeButtonStyle(readBlue));
+            m_readRomBtn->setStyleSheet(makeButtonStyle(readColor));
         }
         if (m_eraseBtn) {
-            m_eraseBtn->setStyleSheet(makeButtonStyle(eraseRed));
+            m_eraseBtn->setStyleSheet(makeButtonStyle(eraseColor));
         }
         if (m_writeSramBtn) {
-            m_writeSramBtn->setStyleSheet(makeButtonStyle(writeGreen));
+            m_writeSramBtn->setStyleSheet(makeButtonStyle(writeColor));
         }
         if (m_readSramBtn) {
-            m_readSramBtn->setStyleSheet(makeButtonStyle(readBlue));
+            m_readSramBtn->setStyleSheet(makeButtonStyle(readColor));
         }
         if (m_clearBtn) {
-            m_clearBtn->setStyleSheet(makeButtonStyle(clearGray));
+            m_clearBtn->setStyleSheet(makeButtonStyle(clearColor));
         }
     }
 
@@ -1526,7 +1527,7 @@ int main(int argc, char *argv[]) {
     if (fontId != -1) {
         QStringList fontFamilies = QFontDatabase::applicationFontFamilies(fontId);
         if (!fontFamilies.isEmpty()) {
-            QFont defaultFont(fontFamilies.first(), 16);
+            QFont defaultFont(fontFamilies.first(), FONT_DEFAULT_PT);
             app.setFont(defaultFont);
         }
     }
