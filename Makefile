@@ -5,6 +5,13 @@ LDFLAGS_USB = $(shell pkg-config --libs libusb-1.0 2>/dev/null || echo "-L/opt/h
 
 # Platform detection
 UNAME_S := $(shell uname -s)
+ifeq ($(OS),Windows_NT)
+    IS_WINDOWS = 1
+else
+    ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
+        IS_WINDOWS = 1
+    endif
+endif
 
 # Source files
 CORE_SRC = src/flashmd_core.c
@@ -15,7 +22,14 @@ QT_SRC = src/flashmd_qt.cpp
 INCLUDES = -Isrc
 
 # Qt configuration
-ifeq ($(UNAME_S),Darwin)
+ifdef IS_WINDOWS
+    # Windows/MSYS2 - Qt6 via pkg-config
+    QT_CFLAGS = $(shell pkg-config --cflags Qt6Widgets 2>/dev/null || pkg-config --cflags Qt5Widgets 2>/dev/null)
+    QT_LDFLAGS = $(shell pkg-config --libs Qt6Widgets 2>/dev/null || pkg-config --libs Qt5Widgets 2>/dev/null)
+    # Try full path first, then fallback to just moc/rcc (rely on PATH in MSYS2)
+    QT_MOC = $(shell [ -x /mingw64/bin/moc ] && echo /mingw64/bin/moc || echo moc)
+    QT_RCC = $(shell [ -x /mingw64/bin/rcc ] && echo /mingw64/bin/rcc || echo rcc)
+else ifeq ($(UNAME_S),Darwin)
     # macOS with Homebrew - try Qt6 first, then Qt5
     QT_MOC = $(shell find /opt/homebrew/Cellar/qtbase -name "moc" -type f 2>/dev/null | head -1)
     QT_RCC = $(shell find /opt/homebrew/Cellar/qtbase -name "rcc" -type f 2>/dev/null | head -1)
