@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
 /* Platform detection */
 #ifdef _WIN32
